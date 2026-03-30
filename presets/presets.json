@@ -1,0 +1,44 @@
+{
+  "python": {
+    "image": "docker.io/library/python:3.11",
+    "description": "Python 3.11 development environment",
+    "ports": [],
+    "volumes": ["./:/app"],
+    "env": {},
+    "cmd": "python"
+  },
+  "node": {
+    "image": "docker.io/library/node:20",
+    "description": "Node.js 20 development environment",
+    "ports": [],
+    "volumes": ["./:/app"],
+    "env": {},
+    "cmd": "node"
+  },
+  "postgres": {
+    "image": "docker.io/library/postgres:15",
+    "description": "PostgreSQL 15 database server",
+    "ports": ["5432:5432"],
+    "volumes": [],
+    "env": {
+      "POSTGRES_PASSWORD": "password"
+    },
+    "cmd": ""
+  },
+  "mongodb": {
+    "image": "docker.io/library/mongo:7",
+    "description": "MongoDB 7 database server",
+    "ports": ["27017:27017"],
+    "volumes": [],
+    "env": {},
+    "cmd": ""
+  },
+  "jupyter": {
+    "image": "docker.io/jupyter/base-notebook",
+    "description": "Jupyter Notebook for data science",
+    "ports": ["8888:8888"],
+    "volumes": ["./:/home/jovyan/work"],
+    "env": {},
+    "cmd": ""
+  }
+}

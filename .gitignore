@@ -1,0 +1,41 @@
+# Binaries
+mini
+mini.exe
+minicontainer
+minicontainer.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go coverage
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# MiniContainer local data
+.minicontainer/
+
+# Build
+dist/
+build/
+
+PRD.md
+Add-ups.md
