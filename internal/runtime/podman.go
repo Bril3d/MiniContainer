@@ -169,6 +169,9 @@ func (p *PodmanRuntime) Stats() ([]ContainerStats, error) {
 	cmd, args := p.buildArgs("stats", "--no-stream", "--format", "json")
 	out, err := Exec(cmd, args...)
 	if err != nil {
+		if strings.Contains(err.Error(), "cgroups v2") {
+			return nil, fmt.Errorf("resource monitoring ('stats') requires cgroups v2 in rootless mode. Try enabling cgroups v2 in your kernel")
+		}
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
