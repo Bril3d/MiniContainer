@@ -40,5 +40,13 @@
     "volumes": ["./:/home/jovyan/work"],
     "env": {},
     "cmd": ""
+  },
+  "go": {
+    "image": "docker.io/library/golang:1.21",
+    "description": "Go 1.21 development environment",
+    "ports": [],
+    "volumes": ["./:/app"],
+    "env": {},
+    "cmd": "go"
   }
 }

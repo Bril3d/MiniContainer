@@ -18,13 +18,13 @@ type RunOptions struct {
 // Container represents a running or stopped container.
 type Container struct {
 	ID      string   `json:"Id"`
-	Name    string   `json:"Names"`
+	Names   []string `json:"Names"`
 	Image   string   `json:"Image"`
 	Status  string   `json:"Status"`
 	State   string   `json:"State"`
 	Ports   []Port   `json:"Ports"`
-	Created string   `json:"Created"`
-	Command string   `json:"Command"`
+	Created int64    `json:"Created"`
+	Command []string `json:"Command"`
 }
 
 // Port represents a container port mapping.

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	rt "github.com/Bril3d/minicontainer/internal/runtime"
@@ -46,6 +47,11 @@ var psCmd = &cobra.Command{
 				id = id[:12]
 			}
 
+			name := ""
+			if len(c.Names) > 0 {
+				name = strings.TrimPrefix(c.Names[0], "/")
+			}
+
 			ports := ""
 			for i, p := range c.Ports {
 				if i > 0 {
@@ -56,7 +62,7 @@ var psCmd = &cobra.Command{
 				}
 			}
 
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", id, c.Name, c.Image, c.Status, ports)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", id, name, c.Image, c.Status, ports)
 		}
 		w.Flush()
 	},

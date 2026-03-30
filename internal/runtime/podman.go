@@ -4,73 +4,112 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 )
 
 // PodmanRuntime implements ContainerRuntime using Podman CLI.
-type PodmanRuntime struct{}
+type PodmanRuntime struct {
+	// useWSL indicates we should run podman through WSL on Windows
+	useWSL    bool
+	wslDistro string
+}
 
 // NewPodmanRuntime creates a new PodmanRuntime instance.
+// On Windows, it auto-detects whether to use WSL to reach Podman.
 func NewPodmanRuntime() *PodmanRuntime {
-	return &PodmanRuntime{}
+	p := &PodmanRuntime{}
+
+	if runtime.GOOS == "windows" {
+		// Try native podman first
+		_, err := Exec("podman", "info", "--format", "{{.Host.Os}}")
+		if err != nil {
+			// Native podman connection failed — try via WSL
+			_, wslErr := Exec("wsl", "-d", "podman-machine-default", "--", "podman", "--version")
+			if wslErr == nil {
+				p.useWSL = true
+				p.wslDistro = "podman-machine-default"
+			}
+		}
+	}
+
+	return p
+}
+
+// podmanCmd returns the base command and prefix args for calling podman.
+// On Windows with WSL fallback, this wraps the call through `wsl -d <distro> --`.
+func (p *PodmanRuntime) podmanCmd() (string, []string) {
+	if p.useWSL {
+		return "wsl", []string{"-d", p.wslDistro, "--", "podman"}
+	}
+	return "podman", nil
+}
+
+// buildArgs prepends WSL prefix args (if needed) to the podman subcommand args.
+func (p *PodmanRuntime) buildArgs(podmanArgs ...string) (string, []string) {
+	cmd, prefix := p.podmanCmd()
+	return cmd, append(prefix, podmanArgs...)
 }
 
 // Version returns the Podman version string.
 func (p *PodmanRuntime) Version() (string, error) {
-	out, err := Exec("podman", "--version")
+	cmd, args := p.buildArgs("--version")
+	out, err := Exec(cmd, args...)
 	if err != nil {
-		return "", fmt.Errorf("podman is not installed or not in PATH.\n\n  Install guide: https://podman.io/getting-started/installation\n\n  On Windows, make sure WSL2 is enabled and Podman is installed inside WSL.")
+		return "", fmt.Errorf("podman is not installed or not reachable.\n\n  Install guide: https://podman.io/getting-started/installation\n\n  On Windows, make sure WSL2 is enabled and Podman is installed inside WSL.")
 	}
 	return out, nil
 }
 
 // Run starts a new container with the given options.
 func (p *PodmanRuntime) Run(opts RunOptions) (ContainerID, error) {
-	args := []string{"run"}
+	podmanArgs := []string{"run"}
 
 	if opts.Detach {
-		args = append(args, "-d")
+		podmanArgs = append(podmanArgs, "-d")
 	}
 
 	if opts.Interactive {
-		args = append(args, "-it")
+		podmanArgs = append(podmanArgs, "-it")
 	}
 
 	if opts.Name != "" {
-		args = append(args, "--name", opts.Name)
+		podmanArgs = append(podmanArgs, "--name", opts.Name)
 	}
 
 	for _, port := range opts.Ports {
-		args = append(args, "-p", port)
+		podmanArgs = append(podmanArgs, "-p", port)
 	}
 
 	for _, vol := range opts.Volumes {
-		args = append(args, "-v", vol)
+		podmanArgs = append(podmanArgs, "-v", vol)
 	}
 
 	for key, val := range opts.Env {
-		args = append(args, "-e", fmt.Sprintf("%s=%s", key, val))
+		podmanArgs = append(podmanArgs, "-e", fmt.Sprintf("%s=%s", key, val))
 	}
 
-	args = append(args, opts.Image)
-	args = append(args, opts.Cmd...)
+	podmanArgs = append(podmanArgs, opts.Image)
+	podmanArgs = append(podmanArgs, opts.Cmd...)
+
+	cmd, args := p.buildArgs(podmanArgs...)
 
 	if opts.Interactive {
-		err := ExecInteractive("podman", args...)
+		err := ExecInteractive(cmd, args...)
 		return "", err
 	}
 
-	out, err := Exec("podman", args...)
+	out, err := Exec(cmd, args...)
 	if err != nil {
 		return "", fmt.Errorf("failed to start container: %w", err)
 	}
-	// Podman returns the full container ID
 	return strings.TrimSpace(out), nil
 }
 
 // Stop stops a running container by ID or name.
 func (p *PodmanRuntime) Stop(id string) error {
-	_, err := Exec("podman", "stop", id)
+	cmd, args := p.buildArgs("stop", id)
+	_, err := Exec(cmd, args...)
 	if err != nil {
 		return fmt.Errorf("failed to stop container '%s': %w", id, err)
 	}
@@ -79,22 +118,24 @@ func (p *PodmanRuntime) Stop(id string) error {
 
 // Remove deletes a container. If force is true, removes even running containers.
 func (p *PodmanRuntime) Remove(id string, force bool) error {
-	args := []string{"rm"}
+	podmanArgs := []string{"rm"}
 	if force {
-		args = append(args, "-f")
+		podmanArgs = append(podmanArgs, "-f")
 	}
-	args = append(args, id)
+	podmanArgs = append(podmanArgs, id)
 
-	_, err := Exec("podman", args...)
+	cmd, args := p.buildArgs(podmanArgs...)
+	_, err := Exec(cmd, args...)
 	if err != nil {
 		return fmt.Errorf("failed to remove container '%s': %w", id, err)
 	}
 	return nil
 }
 
-// List returns all containers (running by default).
+// List returns all containers (running and stopped).
 func (p *PodmanRuntime) List() ([]Container, error) {
-	out, err := Exec("podman", "ps", "-a", "--format", "json")
+	cmd, args := p.buildArgs("ps", "-a", "--format", "json")
+	out, err := Exec(cmd, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
@@ -113,19 +154,20 @@ func (p *PodmanRuntime) List() ([]Container, error) {
 
 // Logs streams container logs. If follow is true, streams in real time.
 func (p *PodmanRuntime) Logs(id string, follow bool) error {
-	args := []string{"logs"}
+	podmanArgs := []string{"logs"}
 	if follow {
-		args = append(args, "-f")
+		podmanArgs = append(podmanArgs, "-f")
 	}
-	args = append(args, id)
+	podmanArgs = append(podmanArgs, id)
 
-	// Stream logs directly to user's terminal
-	return ExecStream("podman", args...)
+	cmd, args := p.buildArgs(podmanArgs...)
+	return ExecStream(cmd, args...)
 }
 
 // Stats returns resource usage for all running containers.
 func (p *PodmanRuntime) Stats() ([]ContainerStats, error) {
-	out, err := Exec("podman", "stats", "--no-stream", "--format", "json")
+	cmd, args := p.buildArgs("stats", "--no-stream", "--format", "json")
+	out, err := Exec(cmd, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
@@ -145,7 +187,8 @@ func (p *PodmanRuntime) Stats() ([]ContainerStats, error) {
 // Pull downloads a container image with live progress output.
 func (p *PodmanRuntime) Pull(image string) error {
 	fmt.Fprintf(os.Stderr, "Pulling image: %s\n", image)
-	err := ExecStream("podman", "pull", image)
+	cmd, args := p.buildArgs("pull", image)
+	err := ExecStream(cmd, args...)
 	if err != nil {
 		return fmt.Errorf("failed to pull image '%s': %w", image, err)
 	}
@@ -154,7 +197,8 @@ func (p *PodmanRuntime) Pull(image string) error {
 
 // Images lists all locally available images.
 func (p *PodmanRuntime) Images() ([]Image, error) {
-	out, err := Exec("podman", "images", "--format", "json")
+	cmd, args := p.buildArgs("images", "--format", "json")
+	out, err := Exec(cmd, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list images: %w", err)
 	}
@@ -173,7 +217,8 @@ func (p *PodmanRuntime) Images() ([]Image, error) {
 
 // RemoveImage deletes a local image by name or ID.
 func (p *PodmanRuntime) RemoveImage(image string) error {
-	_, err := Exec("podman", "rmi", image)
+	cmd, args := p.buildArgs("rmi", image)
+	_, err := Exec(cmd, args...)
 	if err != nil {
 		return fmt.Errorf("failed to remove image '%s': %w", image, err)
 	}
