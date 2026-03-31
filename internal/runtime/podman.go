@@ -105,7 +105,7 @@ func (p *PodmanRuntime) Run(opts RunOptions) (ContainerID, error) {
 	if err != nil {
 		return "", errors.Humanize(fmt.Errorf("failed to start container: %w", err))
 	}
-	return strings.TrimSpace(out), nil
+	return strings.TrimSpace(cleanOutput(out)), nil
 }
 
 // Stop stops a running container by ID or name.
@@ -139,7 +139,7 @@ func (p *PodmanRuntime) List() ([]Container, error) {
 	cmd, args := p.buildArgs("ps", "-a", "--format", "json")
 	out, err := Exec(cmd, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list containers: %w", err)
+		return nil, errors.Humanize(fmt.Errorf("failed to list containers: %w", err))
 	}
 
 	if out == "" {
@@ -215,7 +215,7 @@ func (p *PodmanRuntime) Images() ([]Image, error) {
 	cmd, args := p.buildArgs("images", "--format", "json")
 	out, err := Exec(cmd, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list images: %w", err)
+		return nil, errors.Humanize(fmt.Errorf("failed to list images: %w", err))
 	}
 
 	if out == "" {
@@ -253,6 +253,18 @@ func cleanJSON(out string) string {
 		return out
 	}
 	return out[idx:]
+}
+
+// cleanOutput handles stripping diagnostic warnings from standard command output (non-JSON).
+func cleanOutput(out string) string {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) == 0 {
+		return ""
+	}
+	
+	// Podman often prepends diagnostics like "time=..." or "level=...".
+	// The actual result (like container ID) is usually on the LAST line.
+	return lines[len(lines)-1]
 }
 
 // Compile-time check that PodmanRuntime implements ContainerRuntime.
