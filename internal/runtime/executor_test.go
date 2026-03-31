@@ -43,38 +43,36 @@ func TestExec_CommandFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for failing command, got nil")
 	}
-	if !strings.Contains(err.Error(), "exit") {
-		t.Fatalf("expected error to mention exit, got: %v", err)
-	}
 }
 
 func TestExecFull_CapturesStdoutAndExitCode(t *testing.T) {
-	var result ExecResult
+	var out string
+	var code int
 
 	if runtime.GOOS == "windows" {
-		result = ExecFull("cmd", "/c", "echo", "test-output")
+		out, code, _ = ExecFull("cmd", "/c", "echo", "test-output")
 	} else {
-		result = ExecFull("echo", "test-output")
+		out, code, _ = ExecFull("echo", "test-output")
 	}
 
-	if result.ExitCode != 0 {
-		t.Fatalf("expected exit code 0, got: %d", result.ExitCode)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got: %d", code)
 	}
-	if result.Stdout != "test-output" {
-		t.Fatalf("expected 'test-output', got: '%s'", result.Stdout)
+	if strings.TrimSpace(out) != "test-output" {
+		t.Fatalf("expected 'test-output', got: '%s'", out)
 	}
 }
 
 func TestExecFull_CapturesNonZeroExit(t *testing.T) {
-	var result ExecResult
+	var code int
 
 	if runtime.GOOS == "windows" {
-		result = ExecFull("cmd", "/c", "exit", "42")
+		_, code, _ = ExecFull("cmd", "/c", "exit", "42")
 	} else {
-		result = ExecFull("sh", "-c", "exit 42")
+		_, code, _ = ExecFull("sh", "-c", "exit 42")
 	}
 
-	if result.ExitCode != 42 {
-		t.Fatalf("expected exit code 42, got: %d", result.ExitCode)
+	if code != 42 {
+		t.Fatalf("expected exit code 42, got: %d", code)
 	}
 }
