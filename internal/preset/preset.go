@@ -56,32 +56,35 @@ func (m *Manager) List() []string {
 // AutoDetect attempts to identify a project in the directory and returns the preset name.
 func (m *Manager) AutoDetect(dir string) (string, bool) {
 	// Node.js
-	if _, err := os.Stat(filepath.Join(dir, "package.json")); err == nil {
+	if exists(filepath.Join(dir, "package.json")) {
 		if _, ok := m.presets["node"]; ok {
 			return "node", true
 		}
 	}
 
 	// Python
-	if _, err := os.Stat(filepath.Join(dir, "requirements.txt")); err == nil {
-		if _, ok := m.presets["python"]; ok {
-			return "python", true
-		}
-	}
-	if _, err := os.Stat(filepath.Join(dir, "pyproject.toml")); err == nil {
-		if _, ok := m.presets["python"]; ok {
-			return "python", true
+	pythonMarkers := []string{"requirements.txt", "Pipfile", "pyproject.toml", "setup.py"}
+	for _, marker := range pythonMarkers {
+		if exists(filepath.Join(dir, marker)) {
+			if _, ok := m.presets["python"]; ok {
+				return "python", true
+			}
 		}
 	}
 
 	// Go
-	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+	if exists(filepath.Join(dir, "go.mod")) {
 		if _, ok := m.presets["go"]; ok {
 			return "go", true
 		}
 	}
 
 	return "", false
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // GetDefaultPath returns the standard path for the presets file relative to the project root.
