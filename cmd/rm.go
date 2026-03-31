@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	rt "github.com/Bril3d/minicontainer/internal/runtime"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -19,15 +19,15 @@ var rmCmd = &cobra.Command{
 		podman := rt.NewPodmanRuntime()
 
 		id := args[0]
-		fmt.Fprintf(os.Stderr, "Removing container %s...\n", id)
+		color.White("Removing container %s...", id)
 
 		err := podman.Remove(id, rmForce)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			color.Red("✗ Error: %v", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("✓ Container removed: %s\n", id)
+		color.Green("✓ Container removed: %s", id)
 	},
 }
 

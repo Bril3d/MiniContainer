@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	rt "github.com/Bril3d/minicontainer/internal/runtime"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ var logsCmd = &cobra.Command{
 
 		err := podman.Logs(containerID, logsFollow)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			color.Red("✗ Error: %v", err)
 			os.Exit(1)
 		}
 	},

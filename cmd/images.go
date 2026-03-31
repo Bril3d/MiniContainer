@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	rt "github.com/Bril3d/minicontainer/internal/runtime"
@@ -48,9 +49,21 @@ var imagesCmd = &cobra.Command{
 
 			repo := img.Repository
 			tag := img.Tag
+
+			// Podman puts the full name:tag in Names[]. Parse repo and tag from it.
 			if len(img.Names) > 0 {
-				repo = img.Names[0]
-				tag = ""
+				name := img.Names[0]
+				if idx := strings.LastIndex(name, ":"); idx > 0 {
+					repo = name[:idx]
+					tag = name[idx+1:]
+				} else {
+					repo = name
+					tag = "latest"
+				}
+			}
+
+			if tag == "" {
+				tag = "<none>"
 			}
 
 			sizeMB := float64(img.Size) / 1024 / 1024

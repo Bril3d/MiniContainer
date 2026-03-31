@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	rt "github.com/Bril3d/minicontainer/internal/runtime"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -17,15 +17,15 @@ var stopCmd = &cobra.Command{
 		podman := rt.NewPodmanRuntime()
 
 		id := args[0]
-		fmt.Fprintf(os.Stderr, "Stopping container %s...\n", id)
+		color.White("Stopping container %s...", id)
 
 		err := podman.Stop(id)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			color.Red("✗ Error: %v", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("✓ Container stopped: %s\n", id)
+		color.Green("✓ Container stopped: %s", id)
 	},
 }
 

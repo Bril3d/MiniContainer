@@ -6,6 +6,8 @@ import (
 	"os"
 	"runtime"
 	"strings"
+
+	"github.com/Bril3d/minicontainer/internal/errors"
 )
 
 // PodmanRuntime implements ContainerRuntime using Podman CLI.
@@ -56,7 +58,7 @@ func (p *PodmanRuntime) Version() (string, error) {
 	cmd, args := p.buildArgs("--version")
 	out, err := Exec(cmd, args...)
 	if err != nil {
-		return "", fmt.Errorf("podman is not installed or not reachable.\n\n  Install guide: https://podman.io/getting-started/installation\n\n  On Windows, make sure WSL2 is enabled and Podman is installed inside WSL.")
+		return "", errors.Humanize(fmt.Errorf("podman is not installed or not reachable.\n\n  Install guide: https://podman.io/getting-started/installation\n\n  On Windows, make sure WSL2 is enabled and Podman is installed inside WSL."))
 	}
 	return out, nil
 }
@@ -101,7 +103,7 @@ func (p *PodmanRuntime) Run(opts RunOptions) (ContainerID, error) {
 
 	out, err := Exec(cmd, args...)
 	if err != nil {
-		return "", fmt.Errorf("failed to start container: %w", err)
+		return "", errors.Humanize(fmt.Errorf("failed to start container: %w", err))
 	}
 	return strings.TrimSpace(out), nil
 }
@@ -111,7 +113,7 @@ func (p *PodmanRuntime) Stop(id string) error {
 	cmd, args := p.buildArgs("stop", id)
 	_, err := Exec(cmd, args...)
 	if err != nil {
-		return fmt.Errorf("failed to stop container '%s': %w", id, err)
+		return errors.Humanize(fmt.Errorf("failed to stop container '%s': %w", id, err))
 	}
 	return nil
 }
@@ -127,7 +129,7 @@ func (p *PodmanRuntime) Remove(id string, force bool) error {
 	cmd, args := p.buildArgs(podmanArgs...)
 	_, err := Exec(cmd, args...)
 	if err != nil {
-		return fmt.Errorf("failed to remove container '%s': %w", id, err)
+		return errors.Humanize(fmt.Errorf("failed to remove container '%s': %w", id, err))
 	}
 	return nil
 }
@@ -140,6 +142,11 @@ func (p *PodmanRuntime) List() ([]Container, error) {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
+	if out == "" {
+		return []Container{}, nil
+	}
+
+	out = cleanJSON(out)
 	if out == "" || out == "[]" || out == "null" {
 		return []Container{}, nil
 	}
@@ -175,6 +182,11 @@ func (p *PodmanRuntime) Stats() ([]ContainerStats, error) {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
+	if out == "" {
+		return []ContainerStats{}, nil
+	}
+
+	out = cleanJSON(out)
 	if out == "" || out == "[]" || out == "null" {
 		return []ContainerStats{}, nil
 	}
@@ -193,7 +205,7 @@ func (p *PodmanRuntime) Pull(image string) error {
 	cmd, args := p.buildArgs("pull", image)
 	err := ExecStream(cmd, args...)
 	if err != nil {
-		return fmt.Errorf("failed to pull image '%s': %w", image, err)
+		return errors.Humanize(fmt.Errorf("failed to pull image '%s': %w", image, err))
 	}
 	return nil
 }
@@ -206,6 +218,11 @@ func (p *PodmanRuntime) Images() ([]Image, error) {
 		return nil, fmt.Errorf("failed to list images: %w", err)
 	}
 
+	if out == "" {
+		return []Image{}, nil
+	}
+
+	out = cleanJSON(out)
 	if out == "" || out == "[]" || out == "null" {
 		return []Image{}, nil
 	}
@@ -226,6 +243,16 @@ func (p *PodmanRuntime) RemoveImage(image string) error {
 		return fmt.Errorf("failed to remove image '%s': %w", image, err)
 	}
 	return nil
+}
+
+// cleanJSON strips leading diagnostic warnings or non-JSON lines often prepended by Podman/WSL.
+func cleanJSON(out string) string {
+	// Find the start of the JSON array or object
+	idx := strings.IndexAny(out, "[{")
+	if idx == -1 {
+		return out
+	}
+	return out[idx:]
 }
 
 // Compile-time check that PodmanRuntime implements ContainerRuntime.

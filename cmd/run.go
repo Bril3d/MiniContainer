@@ -3,10 +3,15 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	ps "github.com/Bril3d/minicontainer/internal/preset"
 	rt "github.com/Bril3d/minicontainer/internal/runtime"
+	"github.com/Bril3d/minicontainer/internal/ui"
+	"github.com/briandowns/spinner"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +54,7 @@ Examples:
 			// Auto-detection
 			if presetMgr != nil {
 				if detected, ok := presetMgr.AutoDetect("."); ok {
-					fmt.Fprintf(os.Stderr, "✓ Auto-detected project type, using preset: %s\n", detected)
+					color.Green("✓ Auto-detected project type, using preset: %s", detected)
 					image = detected
 					presetName = detected
 				}
@@ -57,7 +62,8 @@ Examples:
 		}
 
 		if image == "" {
-			fmt.Fprintf(os.Stderr, "Error: No project detected and no image/preset specified.\n\n")
+			color.Red("✗ No project detected and no image/preset specified.")
+			fmt.Fprintln(os.Stderr)
 			if presetMgr != nil {
 				fmt.Fprintf(os.Stderr, "Available presets: %s\n", strings.Join(presetMgr.List(), ", "))
 			}
@@ -116,25 +122,41 @@ Examples:
 			Interactive: runInteractive,
 		}
 
-		desc := image
-		if presetName != "" {
-			desc = fmt.Sprintf("%s (preset: %s)", image, presetName)
+		// Auto-resolve port conflicts for ALL runs (not just presets)
+		for i, pStr := range opts.Ports {
+			hostPort := parseHostPort(pStr)
+			if hostPort > 0 && !rt.IsPortAvailable(hostPort) {
+				newPort := rt.FindAvailablePort(hostPort + 1)
+				// Rebuild the port string with the new host port
+				opts.Ports[i] = replaceHostPort(pStr, newPort)
+				color.Yellow("⚠ Port %d is in use. Auto-resolved to %d", hostPort, newPort)
+			}
 		}
 
 		if runInteractive {
-			fmt.Fprintf(os.Stderr, "Starting interactive container from %s...\n", desc)
+			color.Cyan("Starting interactive container from %s...", image)
 			_, err := podman.Run(opts)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				color.Red("✗ Error: %v", err)
 				os.Exit(1)
 			}
 			return
 		}
 
-		fmt.Fprintf(os.Stderr, "Starting container from %s...\n", desc)
+		msg := fmt.Sprintf("Starting container from %s", opts.Image)
+		if presetName != "" {
+			msg = fmt.Sprintf("Starting container from %s (preset: %s)", opts.Image, presetName)
+		}
+		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+		s.Suffix = " " + msg + "..."
+		s.Start()
+
 		containerID, err := podman.Run(opts)
+		s.Stop()
+		fmt.Fprint(os.Stderr, "\033[2K\r") // Full line clear
+
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			color.Red("✗ Error: %v", err)
 			os.Exit(1)
 		}
 
@@ -142,8 +164,41 @@ Examples:
 		if len(shortID) > 12 {
 			shortID = shortID[:12]
 		}
-		fmt.Printf("✓ Container started: %s\n", shortID)
+		color.Green("✓ Container started: %s", shortID)
+
+		// Auto-open browser for web presets
+		if hasPreset && activePreset.Web && len(opts.Ports) > 0 {
+			hostPort := parseHostPort(opts.Ports[0])
+			if hostPort > 0 {
+				url := fmt.Sprintf("http://localhost:%d", hostPort)
+				color.Cyan("🔗 Opening browser: %s", url)
+				_ = ui.OpenBrowser(url)
+			}
+		}
 	},
+}
+
+// parseHostPort extracts the host port from a port mapping string like "8080:80" or "8080:80/tcp".
+func parseHostPort(portStr string) int {
+	// Format: hostPort:containerPort or hostPort:containerPort/proto
+	parts := strings.SplitN(portStr, ":", 2)
+	if len(parts) < 2 {
+		return 0
+	}
+	port, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0
+	}
+	return port
+}
+
+// replaceHostPort replaces the host port in a port mapping string.
+func replaceHostPort(portStr string, newHostPort int) string {
+	parts := strings.SplitN(portStr, ":", 2)
+	if len(parts) < 2 {
+		return portStr
+	}
+	return fmt.Sprintf("%d:%s", newHostPort, parts[1])
 }
 
 // splitEnvVar splits "KEY=VALUE" into ["KEY", "VALUE"].

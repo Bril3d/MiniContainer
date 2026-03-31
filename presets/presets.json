@@ -31,7 +31,8 @@
     "ports": ["27017:27017"],
     "volumes": [],
     "env": {},
-    "cmd": ""
+    "cmd": "",
+    "web": false
   },
   "jupyter": {
     "image": "docker.io/jupyter/base-notebook",
@@ -39,7 +40,8 @@
     "ports": ["8888:8888"],
     "volumes": ["./:/home/jovyan/work"],
     "env": {},
-    "cmd": ""
+    "cmd": "",
+    "web": true
   },
   "go": {
     "image": "docker.io/library/golang:1.21",

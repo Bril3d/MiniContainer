@@ -15,6 +15,7 @@ type Preset struct {
 	Volumes     []string          `json:"volumes"`
 	Env         map[string]string `json:"env"`
 	Cmd         string            `json:"cmd"`
+	Web         bool              `json:"web"`
 }
 
 // Manager handles loading and finding presets.
