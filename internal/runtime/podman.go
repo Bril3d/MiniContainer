@@ -240,7 +240,7 @@ func (p *PodmanRuntime) RemoveImage(image string) error {
 	cmd, args := p.buildArgs("rmi", image)
 	_, err := Exec(cmd, args...)
 	if err != nil {
-		return fmt.Errorf("failed to remove image '%s': %w", image, err)
+		return errors.Humanize(fmt.Errorf("failed to remove image '%s': %w", image, err))
 	}
 	return nil
 }
