@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -12,6 +13,7 @@ import (
 
 var (
 	statsWatch bool
+	statsJSON  bool
 )
 
 var statsCmd = &cobra.Command{
@@ -25,6 +27,12 @@ var statsCmd = &cobra.Command{
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
+			}
+
+			if statsJSON {
+				data, _ := json.MarshalIndent(stats, "", "  ")
+				fmt.Println(string(data))
+				return // JSON doesn't support watching in this simple implementation
 			}
 
 			// Clear screen if watching
@@ -55,5 +63,6 @@ var statsCmd = &cobra.Command{
 
 func init() {
 	statsCmd.Flags().BoolVarP(&statsWatch, "watch", "w", false, "Continuously watch statistics")
+	statsCmd.Flags().BoolVar(&statsJSON, "json", false, "Output as JSON")
 	rootCmd.AddCommand(statsCmd)
 }

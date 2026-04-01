@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #121317;
+  --color-surface: #1A1C23;
+  --color-surface-glass: rgba(26, 28, 35, 0.7);
+  --color-primary: #00F5FF;
+  --color-primary-glow: rgba(0, 245, 255, 0.15);
+  --color-accent: #FFB000;
+  --color-text-main: #E0E0E0;
+  --color-text-dim: #949494;
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+
+  --font-sans: "Inter", "Outfit", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  --radius-lg: 12px;
+  --radius-md: 8px;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text-main font-sans antialiased;
+    margin: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface rounded-full;
+    border: 2px solid transparent;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-surface-glass backdrop-blur-md border border-border-subtle rounded-lg;
+    box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-primary {
+    @apply bg-primary text-background font-semibold px-4 py-2 rounded-md transition-all duration-200 hover:scale-[1.02] hover:brightness-110 active:scale-95;
+    box-shadow: 0 0 15px var(--color-primary-glow);
+  }
+
+  .status-pulse {
+    @apply w-2 h-2 rounded-full bg-primary;
+    box-shadow: 0 0 8px #00F5FF;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.9); }
+}
