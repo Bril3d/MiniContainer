@@ -30,7 +30,9 @@ func Humanize(err error) error {
 		return fmt.Errorf("permission denied: try running with elevated privileges or check your Podman rootless configuration")
 	case strings.Contains(msg, "Temporary failure in name resolution"):
 		return fmt.Errorf("network error: container cannot resolve DNS. Check your host's internet connection or VPN settings")
-	case strings.Contains(msg, "exit status 125"), strings.Contains(msg, "failed to pause"), strings.Contains(msg, "failed to unpause"):
+	case strings.Contains(msg, "exit status 125"):
+		return fmt.Errorf("runtime error: Podman failed to create or start the container. This often happens due to invalid volume paths or permission issues")
+	case strings.Contains(msg, "failed to pause"), strings.Contains(msg, "failed to unpause"):
 		return fmt.Errorf("system limitation: pause/unpause is not supported in this environment (Check if cgroups v2 is enabled)")
 	}
 

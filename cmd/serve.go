@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	pst "github.com/Bril3d/minicontainer/internal/preset"
@@ -101,12 +103,38 @@ var serveCmd = &cobra.Command{
 					return
 				}
 
+				var resolvedVolumes []string
+				for _, vol := range p.Volumes {
+					// Handle volume string which might contain multiple colons (e.g., C:\path:/app)
+					lastColon := strings.LastIndex(vol, ":")
+					if lastColon > 0 {
+						hostPath := vol[:lastColon]
+						containerPath := vol[lastColon+1:]
+						
+						absPath, err := filepath.Abs(hostPath)
+						if err == nil {
+							// If on Windows and using WSL Podman, convert D:\ to /mnt/d/
+							if runtime.GOOS == "windows" {
+								absPath = filepath.ToSlash(absPath)
+								if len(absPath) > 2 && absPath[1] == ':' {
+									drive := strings.ToLower(string(absPath[0]))
+									absPath = "/mnt/" + drive + absPath[2:]
+								}
+							}
+							resolvedVolumes = append(resolvedVolumes, fmt.Sprintf("%s:%s", absPath, containerPath))
+							continue
+						}
+					}
+					resolvedVolumes = append(resolvedVolumes, vol)
+				}
+
 				opts := rt.RunOptions{
 					Image:   p.Image,
 					Name:    fmt.Sprintf("%s-%d", presetName, time.Now().Unix()%10000),
 					Ports:   p.Ports,
-					Volumes: p.Volumes,
+					Volumes: resolvedVolumes,
 					Env:     p.Env,
+					Cmd:     strings.Fields(p.Cmd),
 					Detach:  true,
 				}
 
