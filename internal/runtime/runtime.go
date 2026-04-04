@@ -17,7 +17,7 @@ type RunOptions struct {
 
 // Container represents a running or stopped container.
 type Container struct {
-	ID      string   `json:"Id"`
+	ID      string   `json:"ID"`
 	Names   []string `json:"Names"`
 	Image   string   `json:"Image"`
 	Status  string   `json:"Status"`
@@ -37,19 +37,19 @@ type Port struct {
 
 // Image represents a locally pulled container image.
 type Image struct {
-	ID         string   `json:"Id"`
-	Repository string   `json:"repository"`
-	Tag        string   `json:"tag"`
-	Size       int64    `json:"size"`
-	Created    int64    `json:"created"`
+	ID         string   `json:"ID"`
+	Repository string   `json:"Repository"`
+	Tag        string   `json:"Tag"`
+	Size       int64    `json:"Size"`
+	Created    int64    `json:"Created"`
 	Names      []string `json:"Names"`
 }
 
 // ContainerStats holds resource usage data for a running container.
 type ContainerStats struct {
-	ID       string `json:"Id"`
+	ID       string `json:"ID"`
 	Name     string `json:"Name"`
-	CPUPerc  string `json:"CPU"`
+	CPUPerc  string `json:"CPUPerc"`
 	MemUsage string `json:"MemUsage"`
 	MemPerc  string `json:"MemPerc"`
 	NetIO    string `json:"NetIO"`
@@ -62,6 +62,9 @@ type ContainerStats struct {
 type ContainerRuntime interface {
 	// Run starts a new container with the given options.
 	Run(opts RunOptions) (ContainerID, error)
+
+	// Start starts a stopped container by ID or name.
+	Start(id string) error
 
 	// Stop stops a running container by ID or name.
 	Stop(id string) error
@@ -86,6 +89,12 @@ type ContainerRuntime interface {
 
 	// RemoveImage deletes a local image by name or ID.
 	RemoveImage(image string) error
+
+	// Pause pauses a running container.
+	Pause(id string) error
+
+	// Unpause resumes a paused container.
+	Unpause(id string) error
 
 	// Version returns the runtime engine version string.
 	Version() (string, error)

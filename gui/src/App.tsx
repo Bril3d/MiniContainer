@@ -67,7 +67,7 @@ function App() {
         </header>
 
         {/* Content Panel */}
-        <div className="glass-panel p-6 min-h-[500px]">
+        <div className="glass-panel p-6 min-h-[500px] relative">
           {activeTab === "dashboard" && <Dashboard stats={stats} onShowLogs={setSelectedLogContainer} />}
           {activeTab === "marketplace" && <Marketplace />}
           {activeTab === "images" && <ImageLibrary />}
@@ -81,6 +81,25 @@ function App() {
           />
         )}
       </main>
+    </div>
+  );
+}
+
+function ErrorToast({ message, onClose }: { message: string, onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 8000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className="fixed bottom-8 right-8 z-[100] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="bg-surface border-l-4 border-accent p-4 shadow-2xl rounded-r-md flex items-start gap-4">
+        <div className="flex-1">
+          <h5 className="text-accent font-bold text-xs uppercase tracking-widest mb-1">System Alert</h5>
+          <p className="text-sm text-text-main leading-relaxed">{message}</p>
+        </div>
+        <button onClick={onClose} className="text-text-dim hover:text-white transition-colors">&times;</button>
+      </div>
     </div>
   );
 }
@@ -104,13 +123,13 @@ function NavItem({ label, active, onClick }: { label: string; active: boolean; o
 }
 
 function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: string, name: string}) => void }) {
-  const { containers, loading, error, refreshAction, startContainer, stopContainer, removeContainer } = useContainers();
+  const { containers, loading, error, refreshAction, startContainer, stopContainer, removeContainer, pauseContainer, unpauseContainer, clearError } = useContainers();
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-text-dim">Loading node state...</div>;
-  if (error) return <div className="p-4 bg-accent/10 border border-accent/20 text-accent rounded-md">Error: {error}</div>;
+  if (loading && containers.length === 0) return <div className="flex items-center justify-center h-64 text-text-dim">Loading node state...</div>;
 
   return (
     <div className="space-y-6">
+      {error && <ErrorToast message={error} onClose={clearError} />}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold tracking-tight text-text-main/90">Container Instance List</h3>
         <button onClick={refreshAction} className="text-text-dim hover:text-primary transition-colors text-sm font-mono uppercase tracking-widest">
@@ -132,6 +151,10 @@ function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: str
           <tbody className="divide-y divide-border-subtle/30">
             {containers.map((container) => {
               const s = stats[container.id.slice(0, 12)];
+              const statusLower = container.status.toLowerCase();
+              const isRunning = (statusLower.includes("run") || statusLower.includes("up")) && !statusLower.includes("paused");
+              const isPaused = statusLower.includes("paused");
+
               return (
                 <tr key={container.id} className="group hover:bg-white/[0.02] transition-colors">
                   <td className="py-4 font-mono text-xs text-text-dim">{container.id.slice(0, 8)}</td>
@@ -152,10 +175,10 @@ function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: str
                   </td>
                   <td className="py-4 text-sm">
                     <span className={`flex items-center gap-2 ${
-                      container.status.toLowerCase().includes("run") ? "text-primary" : "text-text-dim"
+                      isRunning ? "text-primary" : (isPaused ? "text-yellow-500" : "text-text-dim")
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
-                        container.status.toLowerCase().includes("run") ? "bg-primary animate-pulse shadow-[0_0_8px_#00F5FF]" : "bg-text-dim/40"
+                        isRunning ? "bg-primary animate-pulse shadow-[0_0_8px_#00F5FF]" : (isPaused ? "bg-yellow-500 shadow-[0_0_8px_#EAB308]" : "bg-text-dim/40")
                       }`}></span>
                       {container.status}
                     </span>
@@ -163,11 +186,21 @@ function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: str
                   <td className="py-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ActionBtn label="Logs" onClick={() => onShowLogs({ id: container.id, name: container.names })} />
-                      {container.status.toLowerCase().includes("run") ? (
-                        <ActionBtn label="Stop" onClick={() => stopContainer(container.names)} />
+                      
+                      {isRunning ? (
+                        <>
+                          <ActionBtn label="Pause" onClick={() => pauseContainer(container.id)} />
+                          <ActionBtn label="Stop" onClick={() => stopContainer(container.names)} />
+                        </>
+                      ) : isPaused ? (
+                        <>
+                          <ActionBtn label="Unpause" onClick={() => unpauseContainer(container.id)} />
+                          <ActionBtn label="Stop" onClick={() => stopContainer(container.names)} />
+                        </>
                       ) : (
                         <ActionBtn label="Start" onClick={() => startContainer(container.names)} />
                       )}
+                      
                       <ActionBtn label="Remove" danger onClick={() => removeContainer(container.names)} />
                     </div>
                   </td>
@@ -189,13 +222,13 @@ function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: str
 }
 
 function ImageLibrary() {
-  const { images, loading, error, refreshAction, removeImage } = useImages();
+  const { images, loading, error, refreshAction, removeImage, clearError } = useImages();
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-text-dim">Scanning local registry...</div>;
-  if (error) return <div className="p-4 bg-accent/10 border border-accent/20 text-accent rounded-md">Error: {error}</div>;
+  if (loading && images.length === 0) return <div className="flex items-center justify-center h-64 text-text-dim">Scanning local registry...</div>;
 
   return (
     <div className="space-y-6">
+      {error && <ErrorToast message={error} onClose={clearError} />}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold tracking-tight text-text-main/90">Local Image Cache</h3>
         <button onClick={refreshAction} className="text-text-dim hover:text-primary transition-colors text-sm font-mono uppercase tracking-widest">
@@ -242,26 +275,23 @@ function ImageLibrary() {
 }
 
 function Marketplace() {
-  const { presets, loading, error, deployAction } = useMarketplace();
+  const { presets, loading, error, deployAction, clearError } = useMarketplace();
   const [deploying, setDeploying] = useState<string | null>(null);
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-text-dim">Loading index...</div>;
-  if (error) return <div className="p-4 bg-accent/10 border border-accent/20 text-accent rounded-md">Error: {error}</div>;
+  if (loading && Object.keys(presets).length === 0) return <div className="flex items-center justify-center h-64 text-text-dim">Loading index...</div>;
 
-  const handleDeploy = async (id: string, name: string) => {
-    setDeploying(name);
+  const handleDeploy = async (id: string) => {
+    setDeploying(id);
     try {
-      const success = await deployAction(id);
-      if (success) {
-        // Success feedback (maybe a toast or switch back to dashboard)
-      }
+      await deployAction(id);
     } finally {
       setDeploying(null);
     }
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+      {error && <div className="col-span-full"><ErrorToast message={error} onClose={clearError} /></div>}
       {Object.entries(presets).map(([key, preset]) => (
         <div key={key} className="bg-surface/50 border border-border-subtle p-6 rounded-lg hover:border-primary/30 transition-all duration-300 group">
           <div className="flex items-center justify-between mb-4">
@@ -283,10 +313,10 @@ function Marketplace() {
 
           <button 
             disabled={!!deploying}
-            onClick={() => handleDeploy(key, key)}
+            onClick={() => handleDeploy(key)}
             className="w-full py-3 bg-white/5 border border-white/10 rounded font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-background transition-all duration-200 active:scale-95 disabled:opacity-50"
           >
-            {deploying === key ? "Initializing..." : "Deploy Node"}
+            {deploying === key ? "Initializing..." : `Deploy ${key}`}
           </button>
         </div>
       ))}

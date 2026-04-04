@@ -14,6 +14,10 @@ export function useLogs(containerId: string | null) {
     }
 
     setLogs([]);
+    if (!(window as any).__TAURI_INTERNALS__) {
+      setActive(false);
+      return;
+    }
     setActive(true);
 
     const command = Command.sidecar("bin/minicontainer", ["logs", "-f", containerId]);

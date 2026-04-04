@@ -212,6 +212,7 @@ func splitEnvVar(s string) []string {
 }
 
 func init() {
+	runCmd.Flags().SetInterspersed(false)
 	runCmd.Flags().StringVar(&runName, "name", "", "Assign a name to the container")
 	runCmd.Flags().StringSliceVarP(&runPorts, "port", "p", nil, "Publish port (e.g. 8080:80)")
 	runCmd.Flags().StringSliceVarP(&runVolumes, "volume", "v", nil, "Bind mount volume (e.g. ./:/app)")

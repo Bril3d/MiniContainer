@@ -6,13 +6,15 @@
   "permissions": [
     "core:default",
     "opener:default",
+    "shell:default",
     {
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "args": true,
-          "cmd": "bin/minicontainer",
-          "sidecar": true
+          "name": "bin/minicontainer",
+          "command": "bin/minicontainer",
+          "sidecar": true,
+          "args": true
         }
       ]
     }

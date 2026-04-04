@@ -73,11 +73,25 @@ export function useMarketplace() {
   }, []);
 
   const deployAction = async (presetId: string) => {
-    // Calling minicontainer run <presetId>
-    const sidecar = Command.sidecar("bin/minicontainer", ["run", presetId]);
-    const output = await sidecar.execute();
-    return output.code === 0;
+    try {
+      if ((window as any).__TAURI_INTERNALS__) {
+        const sidecar = Command.sidecar("bin/minicontainer", ["run", presetId]);
+        const output = await sidecar.execute();
+        return output.code === 0;
+      } else {
+        // Fallback to API server
+        const response = await fetch(`http://localhost:8080/api/deploy?id=${presetId}`, { method: 'POST' });
+        if (!response.ok) throw new Error('Failed to deploy preset');
+        return true;
+      }
+    } catch (err: any) {
+      console.error("Deploy error:", err);
+      setError(err.message);
+      return false;
+    }
   };
 
-  return { presets, loading, error, deployAction };
+  const clearError = () => setError(null);
+  
+  return { presets, loading, error, deployAction, clearError };
 }

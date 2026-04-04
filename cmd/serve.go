@@ -8,6 +8,7 @@ import (
 
 	pst "github.com/Bril3d/minicontainer/internal/preset"
 	rt "github.com/Bril3d/minicontainer/internal/runtime"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 )
@@ -23,17 +24,15 @@ var serveCmd = &cobra.Command{
 
 		r := gin.Default()
 
-		// Custom Gin CORS middleware
-		r.Use(func(c *gin.Context) {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT")
-			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			if c.Request.Method == "OPTIONS" {
-				c.AbortWithStatus(http.StatusOK)
-				return
-			}
-			c.Next()
-		})
+		// Robust CORS middleware
+		r.Use(cors.New(cors.Config{
+			AllowOrigins:     []string{"*"},
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+			ExposeHeaders:    []string{"Content-Length"},
+			AllowCredentials: true,
+			MaxAge:           12 * time.Hour,
+		}))
 
 		api := r.Group("/api")
 		{
@@ -147,6 +146,32 @@ var serveCmd = &cobra.Command{
 				}
 				if err := podman.Remove(name, true); err != nil {
 					c.String(http.StatusInternalServerError, "Failed to remove: "+err.Error())
+					return
+				}
+				c.Status(http.StatusOK)
+			})
+
+			api.POST("/pause", func(c *gin.Context) {
+				id := c.Query("id")
+				if id == "" {
+					c.String(http.StatusBadRequest, "Missing ID parameter")
+					return
+				}
+				if err := podman.Pause(id); err != nil {
+					c.String(http.StatusInternalServerError, err.Error())
+					return
+				}
+				c.Status(http.StatusOK)
+			})
+
+			api.POST("/unpause", func(c *gin.Context) {
+				id := c.Query("id")
+				if id == "" {
+					c.String(http.StatusBadRequest, "Missing ID parameter")
+					return
+				}
+				if err := podman.Unpause(id); err != nil {
+					c.String(http.StatusInternalServerError, err.Error())
 					return
 				}
 				c.Status(http.StatusOK)

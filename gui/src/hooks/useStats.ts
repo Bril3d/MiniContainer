@@ -17,21 +17,47 @@ export function useStats() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const command = Command.sidecar("bin/minicontainer", ["stats", "--json"]);
-      const output = await command.execute();
+      let rawStats: any[];
 
-      if (output.code !== 0) {
-        throw new Error(output.stderr || "Failed to fetch stats");
+      // Check if we are running in Tauri
+      if ((window as any).__TAURI_INTERNALS__) {
+        const command = Command.sidecar("bin/minicontainer", ["stats", "--json"]);
+        const output = await command.execute();
+
+        if (output.code !== 0) {
+          throw new Error(output.stderr || "Failed to fetch stats");
+        }
+
+        rawStats = JSON.parse(output.stdout);
+      } else {
+        // Fallback to API server
+        const response = await fetch('http://localhost:8080/api/stats');
+        if (!response.ok) {
+          throw new Error('Failed to fetch stats from API server');
+        }
+        rawStats = await response.json();
       }
 
-      const rawStats: ContainerStats[] = JSON.parse(output.stdout);
       const statsMap: Record<string, ContainerStats> = {};
       
-      rawStats.forEach((s) => {
-        // Podman JSON fields might be PascalCase or lowercase depending on version 
-        // Our Go struct uses PascalCase but json.MarshalIndent handles it.
-        // We'll normalize here.
-        statsMap[s.id] = s;
+      (rawStats || []).forEach((s) => {
+        // Handle both PascalCase and lowercase from different runtime outputs
+        const id = s.ID || s.id || "";
+        const name = s.Name || s.name || "unknown";
+        const cpu = s.CPUPerc || s.cpu_perc || "0%";
+        const mem = s.MemUsage || s.mem_usage || "0MB";
+        const memPerc = s.MemPerc || s.mem_perc || "0%";
+        const net = s.NetIO || s.net_io || "0B / 0B";
+
+        const shortId = id.substring(0, 12);
+        statsMap[shortId] = {
+          id: shortId,
+          name: name,
+          cpu_perc: cpu,
+          mem_usage: mem,
+          mem_perc: memPerc,
+          net_io: net
+        };
       });
 
       setStats(statsMap);
