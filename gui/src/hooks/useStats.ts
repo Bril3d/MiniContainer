@@ -72,7 +72,7 @@ export function useStats() {
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 2000); // Polling every 2s
+    const interval = setInterval(fetchStats, 30000); // Polling every 30s
     return () => clearInterval(interval);
   }, [fetchStats]);
 

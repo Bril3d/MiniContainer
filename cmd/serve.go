@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 	"time"
 
 	pst "github.com/Bril3d/minicontainer/internal/preset"
@@ -14,15 +16,19 @@ import (
 )
 
 var servePort int
+var noGui bool
 
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Start the API daemon",
-	Long:  "Start a REST API server to handle container operations for the browser frontend.",
+	Short: "Start both MiniContainer API and GUI",
+	Long:  "Start the backend REST API server and launch the Tauri GUI. Use --no-gui to run only the API.",
 	Run: func(cmd *cobra.Command, args []string) {
 		podman := rt.NewPodmanRuntime()
 
-		r := gin.Default()
+		// Configure Gin
+		gin.SetMode(gin.ReleaseMode)
+		r := gin.New()
+		r.Use(gin.Recovery())
 
 		// Robust CORS middleware
 		r.Use(cors.New(cors.Config{
@@ -200,17 +206,62 @@ var serveCmd = &cobra.Command{
 			})
 		}
 
-		fmt.Printf("MiniContainer API Daemon starting on http://localhost:%d\n", servePort)
-		fmt.Printf("CORS enabled for all origins (Development mode)\n")
+		if noGui {
+			fmt.Printf("MiniContainer API Daemon starting on http://localhost:%d\n", servePort)
+			if err := r.Run(fmt.Sprintf(":%d", servePort)); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+				os.Exit(1)
+			}
+		} else {
+			// Start API in background
+			go func() {
+				if err := r.Run(fmt.Sprintf(":%d", servePort)); err != nil {
+					fmt.Fprintf(os.Stderr, "Error starting API: %s\n", err)
+					os.Exit(1)
+				}
+			}()
 
-		if err := r.Run(fmt.Sprintf(":%d", servePort)); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-			os.Exit(1)
+			// Wait for API to be ready
+			waitForAPI(servePort)
+
+			fmt.Println("Launching MiniContainer GUI...")
+			if err := launchGUI(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error launching GUI: %s\n", err)
+				os.Exit(1)
+			}
 		}
 	},
 }
 
+func waitForAPI(port int) {
+	url := fmt.Sprintf("http://localhost:%d/api/version", port)
+	for i := 0; i < 20; i++ {
+		resp, err := http.Get(url)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	fmt.Println("Warning: API is taking longer than expected to start. Attempting to launch GUI anyway...")
+}
+
+func launchGUI() error {
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd", "/c", "npm", "run", "tauri", "dev")
+	} else {
+		cmd = exec.Command("npm", "run", "tauri", "dev")
+	}
+
+	cmd.Dir = "gui"
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
 func init() {
 	serveCmd.Flags().IntVarP(&servePort, "port", "p", 8080, "Port to listen on")
+	serveCmd.Flags().BoolVar(&noGui, "no-gui", false, "Skip launching the GUI")
 	rootCmd.AddCommand(serveCmd)
 }
