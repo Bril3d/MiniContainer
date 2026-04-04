@@ -69,6 +69,9 @@ func (p *PodmanRuntime) Run(opts RunOptions) (ContainerID, error) {
 
 	if opts.Detach {
 		podmanArgs = append(podmanArgs, "-d")
+		// Add -i (Interactive) and -t (TTY) by default for detached containers to keep them alive
+		// if they don't have a long-running foreground process (e.g. Python REPL).
+		podmanArgs = append(podmanArgs, "-i", "-t")
 	}
 
 	if opts.Interactive {
@@ -106,6 +109,16 @@ func (p *PodmanRuntime) Run(opts RunOptions) (ContainerID, error) {
 		return "", errors.Humanize(fmt.Errorf("failed to start container: %w", err))
 	}
 	return strings.TrimSpace(cleanOutput(out)), nil
+}
+
+// Start starts a stopped container by ID or name.
+func (p *PodmanRuntime) Start(id string) error {
+	cmd, args := p.buildArgs("start", id)
+	_, err := Exec(cmd, args...)
+	if err != nil {
+		return errors.Humanize(fmt.Errorf("failed to start container '%s': %w", id, err))
+	}
+	return nil
 }
 
 // Stop stops a running container by ID or name.
@@ -232,6 +245,22 @@ func (p *PodmanRuntime) Images() ([]Image, error) {
 		return nil, fmt.Errorf("failed to parse image list: %w", err)
 	}
 
+	// Post-process to ensure Repository and Tag are populated from Names if empty
+	for i := range images {
+		if (images[i].Repository == "" || images[i].Repository == "<none>") && len(images[i].Names) > 0 {
+			fullName := images[i].Names[0]
+			// Split by colon to get repo and tag
+			parts := strings.Split(fullName, ":")
+			if len(parts) > 1 {
+				images[i].Repository = strings.Join(parts[:len(parts)-1], ":")
+				images[i].Tag = parts[len(parts)-1]
+			} else {
+				images[i].Repository = fullName
+				images[i].Tag = "latest"
+			}
+		}
+	}
+
 	return images, nil
 }
 
@@ -241,6 +270,26 @@ func (p *PodmanRuntime) RemoveImage(image string) error {
 	_, err := Exec(cmd, args...)
 	if err != nil {
 		return errors.Humanize(fmt.Errorf("failed to remove image '%s': %w", image, err))
+	}
+	return nil
+}
+
+// Pause pauses a running container.
+func (p *PodmanRuntime) Pause(id string) error {
+	cmd, args := p.buildArgs("pause", id)
+	_, err := Exec(cmd, args...)
+	if err != nil {
+		return errors.Humanize(fmt.Errorf("failed to pause container '%s': %w", id, err))
+	}
+	return nil
+}
+
+// Unpause resumes a paused container.
+func (p *PodmanRuntime) Unpause(id string) error {
+	cmd, args := p.buildArgs("unpause", id)
+	_, err := Exec(cmd, args...)
+	if err != nil {
+		return errors.Humanize(fmt.Errorf("failed to unpause container '%s': %w", id, err))
 	}
 	return nil
 }
