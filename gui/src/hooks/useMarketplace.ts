@@ -10,6 +10,8 @@ export interface Preset {
   env: Record<string, string>;
   cmd: string;
   web?: boolean;
+  category?: string;
+  icon?: string;
 }
 
 export function useMarketplace() {

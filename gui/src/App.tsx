@@ -4,6 +4,25 @@ import { useImages } from "./hooks/useImages";
 import { useMarketplace } from "./hooks/useMarketplace";
 import { useStats } from "./hooks/useStats";
 import { useLogs } from "./hooks/useLogs";
+import { 
+  Terminal, 
+  Activity, 
+  Layers, 
+  Archive, 
+  Database, 
+  Globe, 
+  Cpu, 
+  Zap, 
+  Package, 
+  Binary, 
+  Coffee, 
+  Code, 
+  Gem, 
+  Layout, 
+  Box, 
+  Search,
+  Filter
+} from "lucide-react";
 
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -278,6 +297,9 @@ function ImageLibrary() {
 function Marketplace() {
   const { presets, loading, error, deployAction, clearError } = useMarketplace();
   const [deploying, setDeploying] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+
+  const categories = ["All", "Develop", "Database", "Service", "Tools"];
 
   if (loading && Object.keys(presets).length === 0) return <div className="flex items-center justify-center h-64 text-text-dim">Loading index...</div>;
 
@@ -290,37 +312,93 @@ function Marketplace() {
     }
   };
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
-      {error && <div className="col-span-full"><ErrorToast message={error} onClose={clearError} /></div>}
-      {Object.entries(presets).map(([key, preset]) => (
-        <div key={key} className="bg-surface/50 border border-border-subtle p-6 rounded-lg hover:border-primary/30 transition-all duration-300 group">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-bold group-hover:text-primary transition-colors">{key}</h4>
-            <span className="font-mono text-[10px] text-text-dim bg-white/5 px-2 py-0.5 rounded">v1.0</span>
-          </div>
-          <p className="text-sm text-text-dim mb-10 min-h-[40px] italic">"{preset.description}"</p>
-          
-          <div className="space-y-3 mb-8">
-            <div className="flex justify-between text-[11px] font-mono">
-              <span className="text-text-dim/60">SOURCE</span>
-              <span className="truncate max-w-[150px]">{preset.image.split('/').pop()}</span>
-            </div>
-            <div className="flex justify-between text-[11px] font-mono">
-              <span className="text-text-dim/60">NETWORK</span>
-              <span>{preset.ports.length > 0 ? preset.ports.join(', ') : "Internal Only"}</span>
-            </div>
-          </div>
+  const filteredPresets = Object.entries(presets).filter(([_, p]) => 
+    selectedCategory === "All" || p.category === selectedCategory
+  );
 
-          <button 
-            disabled={!!deploying}
-            onClick={() => handleDeploy(key)}
-            className="w-full py-3 bg-white/5 border border-white/10 rounded font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-background transition-all duration-200 active:scale-95 disabled:opacity-50"
-          >
-            {deploying === key ? "Initializing..." : `Deploy ${key}`}
-          </button>
+  const IconMap: Record<string, any> = {
+    python: Code,
+    package: Package,
+    binary: Binary,
+    cpu: Cpu,
+    database: Database,
+    box: Box,
+    zap: Zap,
+    globe: Globe,
+    coffee: Coffee,
+    code: Code,
+    gem: Gem,
+    layout: Layout,
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div className="flex bg-surface/50 p-1 rounded-lg border border-border-subtle">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
+                selectedCategory === cat 
+                  ? "bg-primary text-background shadow-[0_0_10px_rgba(0,245,255,0.4)]" 
+                  : "text-text-dim hover:text-text-main hover:bg-white/5"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
-      ))}
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-dim group-focus-within:text-primary transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Search templates..." 
+            className="bg-surface/50 border border-border-subtle rounded-lg pl-10 pr-4 py-1.5 text-xs focus:border-primary/50 outline-none transition-all w-64"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+        {error && <div className="col-span-full"><ErrorToast message={error} onClose={clearError} /></div>}
+        {filteredPresets.map(([key, preset]) => {
+          const IconObj = IconMap[preset.icon || "box"] || Box;
+          return (
+            <div key={key} className="bg-surface/50 border border-border-subtle p-6 rounded-lg hover:border-primary/30 transition-all duration-300 group flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                    <IconObj className="w-5 h-5 text-text-dim group-hover:text-primary transition-colors" />
+                  </div>
+                  <h4 className="text-lg font-bold group-hover:text-primary transition-colors capitalize">{key}</h4>
+                </div>
+                <span className="font-mono text-[10px] text-text-dim bg-white/5 px-2 py-0.5 rounded uppercase">{preset.category || "Misc"}</span>
+              </div>
+              
+              <p className="text-sm text-text-dim mb-6 italic flex-grow">"{preset.description}"</p>
+              
+              <div className="space-y-3 mb-8">
+                <div className="flex justify-between text-[11px] font-mono">
+                  <span className="text-text-dim/60">SOURCE</span>
+                  <span className="truncate max-w-[150px]">{preset.image.split('/').pop()}</span>
+                </div>
+                <div className="flex justify-between text-[11px] font-mono">
+                  <span className="text-text-dim/60">NETWORK</span>
+                  <span>{preset.ports && preset.ports.length > 0 ? preset.ports.join(', ') : "Internal Only"}</span>
+                </div>
+              </div>
+
+              <button 
+                disabled={!!deploying}
+                onClick={() => handleDeploy(key)}
+                className="w-full py-3 bg-white/5 border border-white/10 rounded font-bold text-xs uppercase tracking-widest hover:bg-primary hover:text-background transition-all duration-200 active:scale-95 disabled:opacity-50"
+              >
+                {deploying === key ? "Initializing..." : `Launch ${key}`}
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

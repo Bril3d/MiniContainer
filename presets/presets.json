@@ -5,7 +5,9 @@
     "ports": [],
     "volumes": ["./:/app"],
     "env": {},
-    "cmd": "python"
+    "cmd": "python",
+    "category": "Develop",
+    "icon": "python"
   },
   "node": {
     "image": "docker.io/library/node:20",
@@ -13,7 +15,29 @@
     "ports": [],
     "volumes": ["./:/app"],
     "env": {},
-    "cmd": "node"
+    "cmd": "node",
+    "category": "Develop",
+    "icon": "package"
+  },
+  "go": {
+    "image": "docker.io/library/golang:1.21",
+    "description": "Go 1.21 development environment",
+    "ports": [],
+    "volumes": ["./:/app"],
+    "env": {},
+    "cmd": "go",
+    "category": "Develop",
+    "icon": "binary"
+  },
+  "rust": {
+    "image": "docker.io/library/rust:1.75",
+    "description": "Rust development environment",
+    "ports": [],
+    "volumes": ["./:/app"],
+    "env": {},
+    "cmd": "cargo",
+    "category": "Develop",
+    "icon": "cpu"
   },
   "postgres": {
     "image": "docker.io/library/postgres:15",
@@ -23,7 +47,9 @@
     "env": {
       "POSTGRES_PASSWORD": "password"
     },
-    "cmd": ""
+    "cmd": "",
+    "category": "Database",
+    "icon": "database"
   },
   "mongodb": {
     "image": "docker.io/library/mongo:7",
@@ -32,7 +58,72 @@
     "volumes": [],
     "env": {},
     "cmd": "",
-    "web": false
+    "category": "Database",
+    "icon": "box"
+  },
+  "redis": {
+    "image": "docker.io/library/redis:7-alpine",
+    "description": "Redis in-memory data store",
+    "ports": ["6379:6379"],
+    "volumes": [],
+    "env": {},
+    "cmd": "",
+    "category": "Database",
+    "icon": "zap"
+  },
+  "mysql": {
+    "image": "docker.io/library/mysql:8",
+    "description": "MySQL 8 database server",
+    "ports": ["3306:3306"],
+    "volumes": [],
+    "env": {
+      "MYSQL_ROOT_PASSWORD": "password"
+    },
+    "cmd": "",
+    "category": "Database",
+    "icon": "database"
+  },
+  "nginx": {
+    "image": "docker.io/library/nginx:alpine",
+    "description": "High-performance web server",
+    "ports": ["80:80"],
+    "volumes": ["./:/usr/share/nginx/html"],
+    "env": {},
+    "cmd": "",
+    "web": true,
+    "category": "Service",
+    "icon": "globe"
+  },
+  "java": {
+    "image": "docker.io/library/maven:3.9-eclipse-temurin-17",
+    "description": "Java Maven development environment",
+    "ports": ["8080:8080"],
+    "volumes": ["./:/app"],
+    "env": {},
+    "cmd": "mvn",
+    "category": "Develop",
+    "icon": "coffee"
+  },
+  "php": {
+    "image": "docker.io/library/php:8.2-apache",
+    "description": "PHP with Apache web server",
+    "ports": ["8080:80"],
+    "volumes": ["./:/var/www/html"],
+    "env": {},
+    "cmd": "",
+    "web": true,
+    "category": "Develop",
+    "icon": "code"
+  },
+  "ruby": {
+    "image": "docker.io/library/ruby:3.2",
+    "description": "Ruby development environment",
+    "ports": [],
+    "volumes": ["./:/app"],
+    "env": {},
+    "cmd": "irb",
+    "category": "Develop",
+    "icon": "gem"
   },
   "jupyter": {
     "image": "docker.io/jupyter/base-notebook",
@@ -41,14 +132,18 @@
     "volumes": ["./:/home/jovyan/work"],
     "env": {},
     "cmd": "",
-    "web": true
+    "web": true,
+    "category": "Tools",
+    "icon": "layout"
   },
-  "go": {
-    "image": "docker.io/library/golang:1.21",
-    "description": "Go 1.21 development environment",
+  "alpine": {
+    "image": "docker.io/library/alpine:latest",
+    "description": "Minimal Linux environment",
     "ports": [],
     "volumes": ["./:/app"],
     "env": {},
-    "cmd": "go"
+    "cmd": "sh",
+    "category": "Tools",
+    "icon": "box"
   }
 }
