@@ -34,16 +34,32 @@ var serveCmd = &cobra.Command{
 
 		// Robust CORS middleware
 		r.Use(cors.New(cors.Config{
-			AllowOrigins:     []string{"*"},
+			AllowOrigins:     []string{"http://localhost:1420", "http://localhost:8080"},
 			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 			ExposeHeaders:    []string{"Content-Length"},
 			AllowCredentials: true,
-			MaxAge:           12 * time.Hour,
+			AllowOriginFunc: func(origin string) bool {
+				return strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "tauri://")
+			},
+			MaxAge: 12 * time.Hour,
 		}))
+
+		manager, err := pst.NewManager(pst.GetDefaultPath())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to load presets: %v\n", err)
+		}
 
 		api := r.Group("/api")
 		{
+			api.GET("/presets", func(c *gin.Context) {
+				if manager == nil {
+					c.String(http.StatusInternalServerError, "Presets not loaded")
+					return
+				}
+				c.JSON(http.StatusOK, manager.GetAll())
+			})
+
 			api.GET("/ps", func(c *gin.Context) {
 				containers, err := podman.List()
 				if err != nil {
@@ -91,9 +107,8 @@ var serveCmd = &cobra.Command{
 					return
 				}
 
-				manager, err := pst.NewManager(pst.GetDefaultPath())
-				if err != nil {
-					c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to load presets: %s", err))
+				if manager == nil {
+					c.String(http.StatusInternalServerError, "Presets not available")
 					return
 				}
 

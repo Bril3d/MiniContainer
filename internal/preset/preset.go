@@ -44,6 +44,11 @@ func (m *Manager) Find(name string) (Preset, bool) {
 	return p, ok
 }
 
+// GetAll returns all loaded presets.
+func (m *Manager) GetAll() map[string]Preset {
+	return m.presets
+}
+
 // List returns all preset names.
 func (m *Manager) List() []string {
 	names := make([]string, 0, len(m.presets))

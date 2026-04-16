@@ -76,7 +76,7 @@ export function useContainers() {
 
   const startContainer = async (name: string) => {
     if ((window as any).__TAURI_INTERNALS__) {
-      const sidecar = Command.sidecar("bin/minicontainer", ["run", name]);
+      const sidecar = Command.sidecar("bin/minicontainer", ["start", name]);
       await sidecar.execute();
     } else {
       const response = await fetch(`http://localhost:8080/api/start?name=${name}`, { method: 'POST' });
@@ -98,7 +98,7 @@ export function useContainers() {
 
   const removeContainer = async (name: string) => {
     if ((window as any).__TAURI_INTERNALS__) {
-      const sidecar = Command.sidecar("bin/minicontainer", ["remove", name]);
+      const sidecar = Command.sidecar("bin/minicontainer", ["rm", "--force", name]);
       await sidecar.execute();
     } else {
       const response = await fetch(`http://localhost:8080/api/remove?name=${name}`, { method: 'POST' });

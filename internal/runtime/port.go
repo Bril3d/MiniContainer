@@ -24,5 +24,5 @@ func FindAvailablePort(startPort int) int {
 		}
 		port++
 	}
-	return startPort // Return original if none found in range
+	return -1 // Return -1 if none found in range
 }

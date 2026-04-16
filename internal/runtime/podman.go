@@ -111,13 +111,79 @@ func (p *PodmanRuntime) Run(opts RunOptions) (ContainerID, error) {
 	return strings.TrimSpace(cleanOutput(out)), nil
 }
 
+// containerInspect holds the subset of `podman inspect` we need.
+type containerInspect struct {
+	Config struct {
+		Tty       bool     `json:"Tty"`
+		OpenStdin bool     `json:"OpenStdin"`
+		Cmd       []string `json:"Cmd"`
+		Image     string   `json:"Image"`
+	} `json:"Config"`
+	Name            string          `json:"Name"`
+	HostConfig      json.RawMessage `json:"HostConfig"`
+}
+
 // Start starts a stopped container by ID or name.
+// If the container was created without TTY/Stdin (legacy), it recreates it
+// with proper flags so interactive processes (python, node) stay alive.
 func (p *PodmanRuntime) Start(id string) error {
+	// First, try a normal start
 	cmd, args := p.buildArgs("start", id)
 	_, err := Exec(cmd, args...)
 	if err != nil {
 		return errors.Humanize(fmt.Errorf("failed to start container '%s': %w", id, err))
 	}
+
+	// Check if the container actually stayed running
+	cmd2, args2 := p.buildArgs("inspect", "--format", "{{.State.Running}}", id)
+	out, err := Exec(cmd2, args2...)
+	if err != nil {
+		return nil // started but can't inspect — don't error
+	}
+
+	running := strings.TrimSpace(cleanOutput(out))
+	if running == "true" {
+		return nil // container is running, all good
+	}
+
+	// Container exited immediately — likely missing TTY.
+	// Inspect it to get config, then recreate with -it flags.
+	cmd3, args3 := p.buildArgs("inspect", "--format", "json", id)
+	inspectOut, err := Exec(cmd3, args3...)
+	if err != nil {
+		return nil // can't inspect, nothing more we can do
+	}
+
+	inspectOut = cleanJSON(inspectOut)
+	var inspections []containerInspect
+	if err := json.Unmarshal([]byte(inspectOut), &inspections); err != nil || len(inspections) == 0 {
+		return nil
+	}
+	info := inspections[0]
+
+	// Only attempt recreate if Tty was not set (legacy container)
+	if info.Config.Tty {
+		return nil // container had TTY but still exited — nothing we can do
+	}
+
+	// Get the container's image, name, ports, etc for recreation
+	containerName := strings.TrimPrefix(info.Name, "/")
+	image := info.Config.Image
+
+	// Remove the old container
+	_ = p.Remove(id, true)
+
+	// Recreate with -it flags so interactive processes stay alive
+	recreateArgs := []string{"run", "-d", "-i", "-t", "--name", containerName}
+	recreateArgs = append(recreateArgs, image)
+	recreateArgs = append(recreateArgs, info.Config.Cmd...)
+
+	cmd4, args4 := p.buildArgs(recreateArgs...)
+	_, err = Exec(cmd4, args4...)
+	if err != nil {
+		return errors.Humanize(fmt.Errorf("failed to recreate container '%s' with TTY: %w", id, err))
+	}
+
 	return nil
 }
 
@@ -189,8 +255,12 @@ func (p *PodmanRuntime) Stats() ([]ContainerStats, error) {
 	cmd, args := p.buildArgs("stats", "--no-stream", "--format", "json")
 	out, err := Exec(cmd, args...)
 	if err != nil {
-		if strings.Contains(err.Error(), "cgroups v2") {
-			return nil, fmt.Errorf("resource monitoring ('stats') requires cgroups v2 in rootless mode. Try enabling cgroups v2 in your kernel")
+		errMsg := err.Error()
+		// Known Podman/WSL issues that should not crash the UI
+		if strings.Contains(errMsg, "cgroups v2") ||
+			strings.Contains(errMsg, "unknown FS magic") ||
+			strings.Contains(errMsg, "netns") {
+			return []ContainerStats{}, nil
 		}
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}

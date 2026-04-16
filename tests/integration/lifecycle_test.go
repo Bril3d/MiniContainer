@@ -60,7 +60,7 @@ func TestLifecycle_Alpine(t *testing.T) {
 
 	found := false
 	for _, c := range containers {
-		if strings.Contains(c.ID, id) || c.Names[0] == containerName {
+		if strings.Contains(c.ID, id) || (len(c.Names) > 0 && c.Names[0] == containerName) {
 			found = true
 			break
 		}

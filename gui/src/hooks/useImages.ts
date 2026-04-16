@@ -82,7 +82,7 @@ export function useImages() {
   const removeImage = async (id: string) => {
     try {
       if ((window as any).__TAURI_INTERNALS__) {
-        const sidecar = Command.sidecar("bin/minicontainer", ["rmi", id]);
+        const sidecar = Command.sidecar("bin/minicontainer", ["rmi", "--force", id]);
         await sidecar.execute();
       } else {
         const response = await fetch(`http://localhost:8080/api/rmi?id=${id}`, { method: 'POST' });

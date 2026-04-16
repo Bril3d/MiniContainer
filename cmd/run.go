@@ -127,6 +127,10 @@ Examples:
 			hostPort := parseHostPort(pStr)
 			if hostPort > 0 && !rt.IsPortAvailable(hostPort) {
 				newPort := rt.FindAvailablePort(hostPort + 1)
+				if newPort == -1 {
+					color.Red("✗ Error: Could not find an available port in range %d-%d", hostPort+1, hostPort+100)
+					os.Exit(1)
+				}
 				// Rebuild the port string with the new host port
 				opts.Ports[i] = replaceHostPort(pStr, newPort)
 				color.Yellow("⚠ Port %d is in use. Auto-resolved to %d", hostPort, newPort)
