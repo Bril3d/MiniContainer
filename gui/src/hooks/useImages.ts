@@ -110,7 +110,16 @@ export function useImages() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tags, context, dockerfile })
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          const text = await res.text();
+          try {
+            const json = JSON.parse(text);
+            throw new Error(json.error || text);
+          } catch (e: any) {
+            if (e instanceof SyntaxError) throw new Error(text);
+            throw e;
+          }
+        }
       }
       await refreshAction();
     } catch (err: any) {

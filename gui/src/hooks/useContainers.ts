@@ -82,7 +82,10 @@ export function useContainers() {
       await sidecar.execute();
     } else {
       const response = await fetch(`http://localhost:8080/api/start?name=${name}`, { method: 'POST' });
-      if (!response.ok) throw new Error('Failed to start container');
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Failed to start container');
+      }
     }
     await refreshAction();
   };
@@ -93,7 +96,10 @@ export function useContainers() {
       await sidecar.execute();
     } else {
       const response = await fetch(`http://localhost:8080/api/stop?name=${name}`, { method: 'POST' });
-      if (!response.ok) throw new Error('Failed to stop container');
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Failed to stop container');
+      }
     }
     await refreshAction();
   };
@@ -104,7 +110,10 @@ export function useContainers() {
       await sidecar.execute();
     } else {
       const response = await fetch(`http://localhost:8080/api/remove?name=${name}`, { method: 'POST' });
-      if (!response.ok) throw new Error('Failed to remove container');
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Failed to remove container');
+      }
     }
     await refreshAction();
   };

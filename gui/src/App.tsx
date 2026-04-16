@@ -266,7 +266,11 @@ function ImageLibrary() {
           <button 
             onClick={() => {
               const tag = prompt("Enter image tag (e.g. my-app:latest)", "local-dev:latest");
-              if (tag) buildImage([tag]);
+              if (!tag) return;
+              const context = prompt("Enter build context path (directory containing your Dockerfile)", ".");
+              if (!context) return;
+              const dockerfile = prompt("Dockerfile path (leave empty for default 'Dockerfile' in context)", "");
+              buildImage([tag], context, dockerfile || undefined);
             }}
             className="text-primary hover:text-white transition-colors text-sm font-mono uppercase tracking-widest"
           >

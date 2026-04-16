@@ -1,0 +1,4 @@
+services:
+  hello:
+    image: alpine
+    cmd: "echo hello from MiniContainer"
