@@ -25,6 +25,7 @@ type Container struct {
 	Ports   []Port   `json:"Ports"`
 	Created int64    `json:"Created"`
 	Command []string `json:"Command"`
+	Mounts  []string `json:"Mounts"`
 }
 
 // Port represents a container port mapping.
@@ -101,6 +102,9 @@ type ContainerRuntime interface {
 
 	// Exec runs a command inside a running container.
 	Exec(id string, cmd []string, interactive bool) error
+
+	// ExecWithOutput runs a command and returns its output.
+	ExecWithOutput(id string, cmd []string) (string, error)
 
 	// Build creates a new image from a Dockerfile.
 	Build(opts BuildOptions) error

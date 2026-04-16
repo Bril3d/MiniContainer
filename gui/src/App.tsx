@@ -177,7 +177,17 @@ function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: str
               return (
                 <tr key={container.id} className="group hover:bg-white/[0.02] transition-colors">
                   <td className="py-4 font-mono text-xs text-text-dim">{container.id.slice(0, 8)}</td>
-                  <td className="py-4 font-medium">{container.names}</td>
+                  <td className="py-4 font-medium">
+                    <div>{container.names}</div>
+                    <div className="text-[10px] text-text-dim/60 font-mono mt-1 flex flex-wrap gap-x-2">
+                      {container.image}
+                      {container.mounts?.length > 0 && (
+                        <span className="text-primary/70">
+                          {container.mounts.length} Vol
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-4">
                     {s ? (
                       <div className="flex gap-2">

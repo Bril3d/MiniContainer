@@ -5,6 +5,7 @@ type Minifile struct {
 	Version  string             `yaml:"version"`
 	Project  string             `yaml:"project"`
 	Services map[string]Service `yaml:"services"`
+	BaseDir  string             `yaml:"-"` // Not in YAML
 }
 
 // Service represents a single container service in the Minifile.

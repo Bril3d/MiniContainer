@@ -87,7 +87,7 @@ func (p *PodmanRuntime) Run(opts RunOptions) (ContainerID, error) {
 	}
 
 	for _, vol := range opts.Volumes {
-		podmanArgs = append(podmanArgs, "-v", vol)
+		podmanArgs = append(podmanArgs, "-v", p.toWSLPath(vol))
 	}
 
 	for key, val := range opts.Env {
@@ -392,6 +392,14 @@ func (p *PodmanRuntime) Exec(id string, cmdArgs []string, interactive bool) erro
 	return ExecStream(cmd, args...)
 }
 
+// ExecWithOutput runs a command and returns its output.
+func (p *PodmanRuntime) ExecWithOutput(id string, cmdArgs []string) (string, error) {
+	podmanArgs := []string{"exec", id}
+	podmanArgs = append(podmanArgs, cmdArgs...)
+	cmd, args := p.buildArgs(podmanArgs...)
+	return Exec(cmd, args...)
+}
+
 // Build creates a new image from a Dockerfile.
 func (p *PodmanRuntime) Build(opts BuildOptions) error {
 	podmanArgs := []string{"build"}
@@ -420,6 +428,30 @@ func (p *PodmanRuntime) Build(opts BuildOptions) error {
 }
 
 func (p *PodmanRuntime) toWSLPath(path string) string {
+	if !p.useWSL {
+		return path
+	}
+
+	// Handle volume string like host:container:mode
+	parts := strings.Split(path, ":")
+	if len(parts) >= 2 {
+		// If the first part is a Windows drive letter like C:\path
+		if len(parts[0]) == 1 && (parts[1][0] == '\\' || parts[1][0] == '/') {
+			hostPath := parts[0] + ":" + parts[1]
+			containerPart := strings.Join(parts[2:], ":")
+			
+			wslHost := p.translateWindowsPath(hostPath)
+			if containerPart != "" {
+				return wslHost + ":" + containerPart
+			}
+			return wslHost
+		}
+	}
+
+	return p.translateWindowsPath(path)
+}
+
+func (p *PodmanRuntime) translateWindowsPath(path string) string {
 	if !p.useWSL || !strings.Contains(path, ":") {
 		return path
 	}

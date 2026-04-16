@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"path/filepath"
 	"github.com/goccy/go-yaml"
 )
 
@@ -18,6 +19,8 @@ func Parse(path string) (*Minifile, error) {
 	if err := yaml.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("failed to parse Minifile YAML: %w", err)
 	}
+
+	m.BaseDir = filepath.Dir(path)
 
 	// Basic validation
 	if m.Version == "" {

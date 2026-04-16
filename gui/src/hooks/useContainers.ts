@@ -7,6 +7,7 @@ export interface Container {
   status: string;
   ports: string;
   names: string;
+  mounts: string[];
 }
 
 export function useContainers() {
@@ -57,7 +58,8 @@ export function useContainers() {
           image: c.Image || "unknown",
           status: c.Status || "Unknown",
           ports: portStr,
-          names: name
+          names: name,
+          mounts: c.Mounts || []
         };
       });
 
