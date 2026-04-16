@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -405,7 +406,12 @@ func (p *PodmanRuntime) Build(opts BuildOptions) error {
 	podmanArgs := []string{"build"}
 
 	if opts.Dockerfile != "" {
-		podmanArgs = append(podmanArgs, "-f", opts.Dockerfile)
+		// Ensure Dockerfile path is absolute then translated for WSL
+		dfPath := opts.Dockerfile
+		if abs, err := filepath.Abs(dfPath); err == nil {
+			dfPath = abs
+		}
+		podmanArgs = append(podmanArgs, "-f", p.toWSLPath(dfPath))
 	}
 
 	for _, tag := range opts.Tags {
@@ -421,10 +427,25 @@ func (p *PodmanRuntime) Build(opts BuildOptions) error {
 	if context == "" {
 		context = "."
 	}
+
+	// Ensure context path is absolute before translating
+	if abs, err := filepath.Abs(context); err == nil {
+		context = abs
+	}
 	podmanArgs = append(podmanArgs, p.toWSLPath(context))
 
 	cmd, args := p.buildArgs(podmanArgs...)
-	return ExecStream(cmd, args...)
+	
+	// We use Exec instead of ExecStream here because we want to capture 
+	// the output in case of error to provide better diagnostics.
+	out, err := Exec(cmd, args...)
+	if err != nil {
+		if out != "" {
+			return fmt.Errorf("%w: %s", err, out)
+		}
+		return err
+	}
+	return nil
 }
 
 func (p *PodmanRuntime) toWSLPath(path string) string {

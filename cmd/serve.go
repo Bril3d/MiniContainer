@@ -110,11 +110,13 @@ var serveCmd = &cobra.Command{
 					return
 				}
 
+				fmt.Printf("Building image with tags: %v, context: %s, dockerfile: %s\n", opts.Tags, opts.Context, opts.Dockerfile)
 				if err := podman.Build(opts); err != nil {
+					fmt.Printf("Build failed: %v\n", err)
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					return
 				}
-				c.JSON(http.StatusOK, gin.H{"status": "build started"})
+				c.JSON(http.StatusOK, gin.H{"status": "build successful"})
 			})
 
 			api.GET("/ps", func(c *gin.Context) {
