@@ -364,6 +364,16 @@ func (p *PodmanRuntime) Unpause(id string) error {
 	return nil
 }
 
+// Restart restarts a container.
+func (p *PodmanRuntime) Restart(id string) error {
+	cmd, args := p.buildArgs("restart", id)
+	_, err := Exec(cmd, args...)
+	if err != nil {
+		return errors.Humanize(fmt.Errorf("failed to restart container '%s': %w", id, err))
+	}
+	return nil
+}
+
 // Exec runs a command inside a running container.
 func (p *PodmanRuntime) Exec(id string, cmdArgs []string, interactive bool) error {
 	podmanArgs := []string{"exec"}

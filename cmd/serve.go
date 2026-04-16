@@ -79,6 +79,15 @@ var serveCmd = &cobra.Command{
 				c.JSON(http.StatusOK, gin.H{"status": "unpaused"})
 			})
 
+			api.POST("/restart/:id", func(c *gin.Context) {
+				id := c.Param("id")
+				if err := podman.Restart(id); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"status": "restarted"})
+			})
+
 			// Exec operations
 			api.POST("/exec", func(c *gin.Context) {
 				var opts rt.ExecOptions

@@ -142,7 +142,7 @@ function NavItem({ label, active, onClick }: { label: string; active: boolean; o
 }
 
 function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: string, name: string}) => void }) {
-  const { containers, loading, error, refreshAction, startContainer, stopContainer, removeContainer, pauseContainer, unpauseContainer, execContainer, clearError } = useContainers();
+  const { containers, loading, error, refreshAction, startContainer, stopContainer, removeContainer, pauseContainer, unpauseContainer, restartContainer, execContainer, clearError } = useContainers();
 
   if (loading && containers.length === 0) return <div className="flex items-center justify-center h-64 text-text-dim">Loading node state...</div>;
 
@@ -209,6 +209,7 @@ function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: str
                       {isRunning ? (
                         <>
                           <ActionBtn label="Terminal" onClick={() => execContainer(container.id)} />
+                          <ActionBtn label="Restart" onClick={() => restartContainer(container.id)} />
                           <ActionBtn label="Pause" onClick={() => pauseContainer(container.id)} />
                           <ActionBtn label="Stop" onClick={() => stopContainer(container.names)} />
                         </>

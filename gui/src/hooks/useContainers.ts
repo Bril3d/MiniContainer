@@ -143,6 +143,24 @@ export function useContainers() {
     }
   };
 
+  const restartContainer = async (id: string) => {
+    try {
+      setLoading(true);
+      if ((window as any).__TAURI_INTERNALS__) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('exec_podman', { args: ['restart', id] });
+      } else {
+        const res = await fetch(`http://localhost:8080/api/restart/${id}`, { method: 'POST' });
+        if (!res.ok) throw new Error(await res.text());
+      }
+      await refreshAction();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const execContainer = async (id: string, command: string[] = ["sh"]) => {
     try {
       setLoading(true);
@@ -167,5 +185,18 @@ export function useContainers() {
 
   const clearError = () => setError(null);
   
-  return { containers, loading, error, refreshAction, startContainer, stopContainer, removeContainer, pauseContainer, unpauseContainer, execContainer, clearError };
+  return { 
+    containers, 
+    loading, 
+    error, 
+    refreshAction, 
+    startContainer, 
+    stopContainer, 
+    removeContainer, 
+    pauseContainer, 
+    unpauseContainer, 
+    restartContainer,
+    execContainer, 
+    clearError 
+  };
 }
