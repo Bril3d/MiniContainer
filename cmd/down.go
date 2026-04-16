@@ -28,44 +28,13 @@ var downCmd = &cobra.Command{
 
 		fmt.Printf("🛑 Stopping project: %s\n", m.Project)
 		podman := rt.NewPodmanRuntime()
+		orch := minifile.NewOrchestrator(podman)
 
-		// Get all containers to find project matches
-		containers, err := podman.List()
-		if err != nil {
-			fmt.Printf("❌ Failed to list containers: %v\n", err)
+		if err := orch.Down(m); err != nil {
+			fmt.Printf("❌ Shutdown failed: %v\n", err)
 			os.Exit(1)
 		}
-
-		for _, c := range containers {
-			// Basic name matching: project-service
-			// This could be more robust by using labels in the future
-			for serviceName := range m.Services {
-				expectedPrefix := fmt.Sprintf("%s-%s", m.Project, serviceName)
-				match := false
-				for _, n := range c.Names {
-					if n == expectedPrefix || n == "/"+expectedPrefix {
-						match = true
-						break
-					}
-				}
-
-				if match {
-					fmt.Printf("🗑️  Removing %s (%s)...\n", expectedPrefix, c.ID[:12])
-					
-					// Stop first
-					if c.State == "running" {
-						_ = podman.Stop(c.ID)
-					}
-					
-					// Remove - boolean force = true
-					if err := podman.Remove(c.ID, true); err != nil {
-						fmt.Printf("  ❌ Failed to remove %s: %v\n", expectedPrefix, err)
-					} else {
-						fmt.Printf("  ✅ Removed\n")
-					}
-				}
-			}
-		}
+		fmt.Println("✅ All project containers removed.")
 	},
 }
 

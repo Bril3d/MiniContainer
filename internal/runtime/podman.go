@@ -413,10 +413,20 @@ func (p *PodmanRuntime) Build(opts BuildOptions) error {
 	if context == "" {
 		context = "."
 	}
-	podmanArgs = append(podmanArgs, context)
+	podmanArgs = append(podmanArgs, p.toWSLPath(context))
 
 	cmd, args := p.buildArgs(podmanArgs...)
 	return ExecStream(cmd, args...)
+}
+
+func (p *PodmanRuntime) toWSLPath(path string) string {
+	if !p.useWSL || !strings.Contains(path, ":") {
+		return path
+	}
+	// Convert C:\foo\bar to /mnt/c/foo/bar
+	path = strings.ReplaceAll(path, "\\", "/")
+	drive := strings.ToLower(path[:1])
+	return "/mnt/" + drive + path[2:]
 }
 
 // cleanJSON strips leading diagnostic warnings or non-JSON lines often prepended by Podman/WSL.

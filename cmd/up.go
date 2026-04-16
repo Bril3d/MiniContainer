@@ -28,51 +28,13 @@ var upCmd = &cobra.Command{
 
 		fmt.Printf("🚀 Starting project: %s\n", m.Project)
 		podman := rt.NewPodmanRuntime()
+		orch := minifile.NewOrchestrator(podman)
 
-		for name, svc := range m.Services {
-			fmt.Printf("📦 Service: %s\n", name)
-
-			imageName := svc.Image
-			// If build is defined, build it first
-			if svc.Build != nil {
-				imageName = fmt.Sprintf("%s-%s:latest", m.Project, name)
-				fmt.Printf("  🛠️  Building image: %s...\n", imageName)
-				err := podman.Build(rt.BuildOptions{
-					Context:    svc.Build.Context,
-					Dockerfile: svc.Build.Dockerfile,
-					Tags:       []string{imageName},
-					Args:       svc.Build.Args,
-				})
-				if err != nil {
-					fmt.Printf("  ❌ Build failed for %s: %v\n", name, err)
-					continue
-				}
-			}
-
-			if imageName == "" {
-				fmt.Printf("  ⚠️  Skipping %s: no image or build defined\n", name)
-				continue
-			}
-
-			// Run the container
-			containerName := fmt.Sprintf("%s-%s", m.Project, name)
-			
-			opts := rt.RunOptions{
-				Image:  imageName,
-				Name:   containerName,
-				Ports:  svc.Ports,
-				Env:    svc.Environment,
-				Cmd:    svc.Command,
-				Detach: true,
-			}
-
-			id, err := podman.Run(opts)
-			if err != nil {
-				fmt.Printf("  ❌ Failed to start %s: %v\n", name, err)
-				continue
-			}
-			fmt.Printf("  ✅ Started! ID: %s\n", id[:12])
+		if err := orch.Up(m); err != nil {
+			fmt.Printf("❌ Orchestration failed: %v\n", err)
+			os.Exit(1)
 		}
+		fmt.Println("✅ All services are up!")
 	},
 }
 
