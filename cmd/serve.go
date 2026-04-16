@@ -103,6 +103,20 @@ var serveCmd = &cobra.Command{
 				c.JSON(http.StatusOK, gin.H{"status": "executed"})
 			})
 
+			api.POST("/build", func(c *gin.Context) {
+				var opts rt.BuildOptions
+				if err := c.ShouldBindJSON(&opts); err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
+
+				if err := podman.Build(opts); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"status": "build started"})
+			})
+
 			api.GET("/ps", func(c *gin.Context) {
 				containers, err := podman.List()
 				if err != nil {

@@ -392,6 +392,33 @@ func (p *PodmanRuntime) Exec(id string, cmdArgs []string, interactive bool) erro
 	return ExecStream(cmd, args...)
 }
 
+// Build creates a new image from a Dockerfile.
+func (p *PodmanRuntime) Build(opts BuildOptions) error {
+	podmanArgs := []string{"build"}
+
+	if opts.Dockerfile != "" {
+		podmanArgs = append(podmanArgs, "-f", opts.Dockerfile)
+	}
+
+	for _, tag := range opts.Tags {
+		podmanArgs = append(podmanArgs, "-t", tag)
+	}
+
+	for key, val := range opts.Args {
+		podmanArgs = append(podmanArgs, "--build-arg", fmt.Sprintf("%s=%s", key, val))
+	}
+
+	// Context defaults to current directory if empty
+	context := opts.Context
+	if context == "" {
+		context = "."
+	}
+	podmanArgs = append(podmanArgs, context)
+
+	cmd, args := p.buildArgs(podmanArgs...)
+	return ExecStream(cmd, args...)
+}
+
 // cleanJSON strips leading diagnostic warnings or non-JSON lines often prepended by Podman/WSL.
 func cleanJSON(out string) string {
 	// Find the start of the JSON array or object

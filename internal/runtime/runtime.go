@@ -101,6 +101,17 @@ type ContainerRuntime interface {
 
 	// Exec runs a command inside a running container.
 	Exec(id string, cmd []string, interactive bool) error
+
+	// Build creates a new image from a Dockerfile.
+	Build(opts BuildOptions) error
+}
+
+// BuildOptions holds parameters for building a container image.
+type BuildOptions struct {
+	Context    string            `json:"context"`
+	Dockerfile string            `json:"dockerfile"`
+	Tags       []string          `json:"tags"`
+	Args       map[string]string `json:"args"`
 }
 
 // ExecOptions holds parameters for executing a command in a container.

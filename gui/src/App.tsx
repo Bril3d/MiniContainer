@@ -243,7 +243,7 @@ function Dashboard({ stats, onShowLogs }: { stats: any, onShowLogs: (c: {id: str
 }
 
 function ImageLibrary() {
-  const { images, loading, error, refreshAction, removeImage, clearError } = useImages();
+  const { images, loading, error, refreshAction, removeImage, buildImage, clearError } = useImages();
 
   if (loading && images.length === 0) return <div className="flex items-center justify-center h-64 text-text-dim">Scanning local registry...</div>;
 
@@ -252,9 +252,20 @@ function ImageLibrary() {
       {error && <ErrorToast message={error} onClose={clearError} />}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold tracking-tight text-text-main/90">Local Image Cache</h3>
-        <button onClick={refreshAction} className="text-text-dim hover:text-primary transition-colors text-sm font-mono uppercase tracking-widest">
-          [ Re-index ]
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => {
+              const tag = prompt("Enter image tag (e.g. my-app:latest)", "local-dev:latest");
+              if (tag) buildImage([tag]);
+            }}
+            className="text-primary hover:text-white transition-colors text-sm font-mono uppercase tracking-widest"
+          >
+            [ Build ]
+          </button>
+          <button onClick={refreshAction} className="text-text-dim hover:text-primary transition-colors text-sm font-mono uppercase tracking-widest">
+            [ Re-index ]
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

@@ -95,6 +95,31 @@ export function useImages() {
     }
   };
 
+  const buildImage = async (tags: string[], context: string = ".", dockerfile?: string) => {
+    try {
+      setLoading(true);
+      if ((window as any).__TAURI_INTERNALS__) {
+        const args = ['build', ...tags.flatMap(t => ['-t', t])];
+        if (dockerfile) args.push('-f', dockerfile);
+        args.push(context);
+        const sidecar = Command.sidecar("bin/minicontainer", args);
+        await sidecar.execute();
+      } else {
+        const res = await fetch(`http://localhost:8080/api/build`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tags, context, dockerfile })
+        });
+        if (!res.ok) throw new Error(await res.text());
+      }
+      await refreshAction();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearError = () => setError(null);
-  return { images, loading, error, refreshAction, removeImage, clearError };
+  return { images, loading, error, refreshAction, removeImage, buildImage, clearError };
 }
