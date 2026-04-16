@@ -98,4 +98,14 @@ type ContainerRuntime interface {
 
 	// Version returns the runtime engine version string.
 	Version() (string, error)
+
+	// Exec runs a command inside a running container.
+	Exec(id string, cmd []string, interactive bool) error
+}
+
+// ExecOptions holds parameters for executing a command in a container.
+type ExecOptions struct {
+	Container   string   `json:"container"`
+	Command     []string `json:"command"`
+	Interactive bool     `json:"interactive"`
 }

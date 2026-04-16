@@ -60,6 +60,40 @@ var serveCmd = &cobra.Command{
 				c.JSON(http.StatusOK, manager.GetAll())
 			})
 
+			// Pause operations
+			api.POST("/pause/:id", func(c *gin.Context) {
+				id := c.Param("id")
+				if err := podman.Pause(id); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"status": "paused"})
+			})
+
+			api.POST("/unpause/:id", func(c *gin.Context) {
+				id := c.Param("id")
+				if err := podman.Unpause(id); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"status": "unpaused"})
+			})
+
+			// Exec operations
+			api.POST("/exec", func(c *gin.Context) {
+				var opts rt.ExecOptions
+				if err := c.ShouldBindJSON(&opts); err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
+
+				if err := podman.Exec(opts.Container, opts.Command, opts.Interactive); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"status": "executed"})
+			})
+
 			api.GET("/ps", func(c *gin.Context) {
 				containers, err := podman.List()
 				if err != nil {

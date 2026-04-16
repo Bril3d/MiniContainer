@@ -143,7 +143,29 @@ export function useContainers() {
     }
   };
 
+  const execContainer = async (id: string, command: string[] = ["sh"]) => {
+    try {
+      setLoading(true);
+      if ((window as any).__TAURI_INTERNALS__) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        // On desktop, we can try to launch a native terminal for a better experience
+        await invoke('exec_podman', { args: ['exec', '-it', id, ...command] });
+      } else {
+        const res = await fetch(`http://localhost:8080/api/exec`, { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ container: id, command: command, interactive: true })
+        });
+        if (!res.ok) throw new Error(await res.text());
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearError = () => setError(null);
   
-  return { containers, loading, error, refreshAction, startContainer, stopContainer, removeContainer, pauseContainer, unpauseContainer, clearError };
+  return { containers, loading, error, refreshAction, startContainer, stopContainer, removeContainer, pauseContainer, unpauseContainer, execContainer, clearError };
 }

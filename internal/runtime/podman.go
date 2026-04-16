@@ -364,6 +364,24 @@ func (p *PodmanRuntime) Unpause(id string) error {
 	return nil
 }
 
+// Exec runs a command inside a running container.
+func (p *PodmanRuntime) Exec(id string, cmdArgs []string, interactive bool) error {
+	podmanArgs := []string{"exec"}
+	if interactive {
+		podmanArgs = append(podmanArgs, "-it")
+	}
+	podmanArgs = append(podmanArgs, id)
+	podmanArgs = append(podmanArgs, cmdArgs...)
+
+	cmd, args := p.buildArgs(podmanArgs...)
+
+	if interactive {
+		return ExecInteractive(cmd, args...)
+	}
+
+	return ExecStream(cmd, args...)
+}
+
 // cleanJSON strips leading diagnostic warnings or non-JSON lines often prepended by Podman/WSL.
 func cleanJSON(out string) string {
 	// Find the start of the JSON array or object
