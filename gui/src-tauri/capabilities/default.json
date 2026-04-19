@@ -17,6 +17,17 @@
           "args": true
         }
       ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "bin/minicontainer",
+          "command": "bin/minicontainer",
+          "sidecar": true,
+          "args": true
+        }
+      ]
     }
   ]
 }
