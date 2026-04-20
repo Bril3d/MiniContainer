@@ -14,6 +14,45 @@ MiniContainer is a **lightweight, fast container management tool** built on top 
 - 📄 **MiniFile Parsing** — A lightweight `docker-compose` alternative for single-file environment orchestration (`mini up`).
 - 🖥️ **Desktop GUI** — Fast, modern React & Tauri-based interface for managing containers visually.
 
+## 📋 Requirements
+
+- [Podman](https://podman.io/getting-started/installation) installed
+- Windows (with WSL2) or Linux
+- [Go](https://go.dev/dl/) 1.25+
+- [Node.js](https://nodejs.org/) & [npm](https://www.npmjs.com/) (for GUI development)
+
+## 🚀 Getting Started
+
+### 1. Start the Podman Machine
+MiniContainer runs on top of Podman. Ensure your Podman machine is running:
+```bash
+podman machine start
+```
+
+### 2. Run the Full Stack (API + GUI)
+To launch the backend API and the desktop interface simultaneously:
+```bash
+go run main.go serve
+```
+*The API will start on `http://localhost:8080` and the Tauri GUI will launch automatically.*
+
+### 3. Run API Only
+If you prefer using only the CLI or your own frontend:
+```bash
+go run main.go serve --no-gui
+```
+
+### 4. Build and Use the CLI
+You can compile MiniContainer into a standalone executable:
+```bash
+# Build the binary
+go build -o mini.exe main.go
+
+# Use it like Docker
+.\mini.exe ps
+.\mini.exe run alpine echo "Hello from Mini"
+```
+
 ## 🏗️ Architecture
 
 MiniContainer consists of two primary components joined seamlessly:
@@ -21,22 +60,17 @@ MiniContainer consists of two primary components joined seamlessly:
 ### 1. Go Backend & CLI
 Built using Go 1.25.0 and the Cobra CLI framework.
 - **CLI (`cmd/`)**: Docker-like commands wrapped around Podman for easier local development. Manages lifecycle (`up`, `start`, `stop`, `run`), cleanup (`rm`, `down`), debugging (`exec`, `logs`, `stats`), and presets.
-- **API Server**: Starts a Gin-based RESTful API on `localhost:8080`, exposing Podman operations natively to the GUI. Seamlessly handles automatic launching of the Tauri GUI dev server.
+- **API Server**: Starts a Gin-based RESTful API on `localhost:8080`, exposing Podman operations natively to the GUI.
 - **Interoperability**: Contains built-in volume-mounting logic for Windows to translate paths automatically for WSL Podman interop.
 
 ### 2. Frontend GUI (`gui/`)
 A fast desktop application built on top of the Tauri v2 desktop runtime.
 - **Tech Stack**: React 19 + Vite + TailwindCSS 4 + Framer Motion.
-- **Operation Mechanics**: Executes cross-origin HTTP requests to the Go API backend to retrieve container stats, list images, and trigger lifecycle actions natively without relying on raw Tauri rust-commands.
-
-## 📋 Requirements
-
-- [Podman](https://podman.io/getting-started/installation) installed
-- Windows (with WSL2) or Linux
+- **Operation Mechanics**: Executes cross-origin HTTP requests to the Go API backend to retrieve container stats, list images, and trigger lifecycle actions.
 
 ## 🚧 Status
 
-Under active development. The CLI offers essential Podman orchestration, and the Tauri GUI interacts seamlessly via the built-in Go REST API.
+Under active development. CLI and GUI MVP are functional.
 
 ## 📜 License
 
